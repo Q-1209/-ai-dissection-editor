@@ -1,0 +1,76 @@
+:root {
+  /* 背景階層 */
+  --bg-app: #0f1418;
+  --bg-panel: #171d22;
+  --bg-panel-raised: #1d242a;
+  --bg-hover: #232b32;
+
+  /* ボーダー */
+  --border-default: #2a333b;
+  --border-strong: #3a444d;
+
+  /* テキスト */
+  --text-primary: #e4e8ea;
+  --text-secondary: #8a959c;
+  --text-muted: #5a656c;
+
+  /* アクセント(操作可能要素) */
+  --accent: #5b9bd5;
+  --accent-text: #bcdcf7;
+
+  /* 役割別カラー(ノード色分け)。
+     -bg: ノード塗り、-border: ノード枠線、-text: ノード内テキスト。
+     いずれも背景 --bg-app に対して十分なコントラストを確保。 */
+  --role-embedding-bg: #1e3a52;
+  --role-embedding-border: #5b9bd5;
+  --role-embedding-text: #bcdcf7;
+
+  --role-attention-bg: #4a3a1a;
+  --role-attention-border: #d4a24e;
+  --role-attention-text: #f0d8a8;
+
+  --role-mlp-bg: #1c3826;
+  --role-mlp-border: #5fae7a;
+  --role-mlp-text: #b8e4c6;
+
+  --role-norm-bg: #2e2540;
+  --role-norm-border: #9b7fc4;
+  --role-norm-text: #d6c8ec;
+
+  --role-lm_head-bg: #3d1f2c;
+  --role-lm_head-border: #c4587e;
+  --role-lm_head-text: #f0b8cc;
+
+  --role-other-bg: #262b2f;
+  --role-other-border: #5a656c;
+  --role-other-text: #b0b8bd;
+
+  --role-summary-bg: #1a2025;
+  --role-summary-border: #3a444d;
+  --role-summary-text: #9aa5ac;
+
+  /* タイポグラフィ */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+    "Yu Gothic", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+
+  /* レイアウト */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-ui);
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
