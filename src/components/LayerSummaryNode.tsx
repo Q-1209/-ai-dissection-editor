@@ -3,9 +3,14 @@ import type { CSSProperties } from "react";
 
 export interface LayerSummaryNodeData extends Record<string, unknown> {
   kind: "layerSummary";
-  layerIndex: number;
+  // 表示ラベル(例: "Layer 3", "Attention (Layer 3)", "MLP (Layer 3)")
+  label: string;
   nodeCount: number;
   isExpanded: boolean;
+  // このノードをクリックしたときに呼ぶべきグループの識別子。
+  // 折りたたみ状態の管理キーとしてApp.tsx側で使う
+  // (例: "layer-3"はLayer全体、"layer-3-attention"はAttentionブロックのみ)
+  groupKey: string;
 }
 
 export function LayerSummaryNode({ data }: { data: LayerSummaryNodeData }) {
@@ -27,7 +32,7 @@ export function LayerSummaryNode({ data }: { data: LayerSummaryNodeData }) {
         <span style={{ fontSize: 11, opacity: 0.8 }} aria-hidden="true">
           {data.isExpanded ? "▾" : "▸"}
         </span>
-        <span style={{ fontSize: 12, fontWeight: 600 }}>Layer {data.layerIndex}</span>
+        <span style={{ fontSize: 12, fontWeight: 600 }}>{data.label}</span>
       </div>
       <div style={{ fontSize: 10.5, opacity: 0.75, marginTop: 4 }}>
         {data.isExpanded ? "クリックで折りたたむ" : `クリックで展開 · ${data.nodeCount}ノード`}

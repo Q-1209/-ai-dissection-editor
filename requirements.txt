@@ -1,0 +1,7 @@
+# Python dependencies for AI Dissection Editor
+# Install PyTorch separately first (CPU build is enough for small models):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# The structure viewer (python/inspect_model.py) needs only the standard library.
+numpy
+tokenizers
+jinja2

@@ -24,7 +24,13 @@ function paramCountFromShape(shape: number[] | null): number | null {
   return shape.reduce((a, b) => a * b, 1);
 }
 
-const LAYER_COLUMN_WIDTH = 280;
+// 列幅は展開状態によって動的に決まる。折りたたまれた層は代表ノード1つぶんの
+// 幅しか使わず、展開されるほど(ブロック単位 -> 個別ノードまで)幅が広がる。
+// これにより、隣接する層のノードが重ならず、かつ折りたたんだ層は無駄に
+// 横幅を占有しない。
+const COLLAPSED_COLUMN_WIDTH = 260; // 折りたたみ状態(代表ノード1つ)の列幅
+const SUB_COLUMN_WIDTH = 240; // 展開時、Attention/MLPそれぞれが占める列幅
+const COLUMN_GAP = 40; // 層と層の間の余白
 const ROW_HEIGHT = 76;
 const NON_LAYER_X = -340; // embedding/lm_head等、layer_indexを持たないノードの列
 const HEADER_ROW_Y = -ROW_HEIGHT; // 展開/折りたたみヘッダーの縦位置
@@ -52,6 +58,13 @@ function rowIndexForKey(id: string): number {
   return ROW_ORDER_FRAGMENTS.length; // 未知のキーは末尾に配置
 }
 
+// ノードが Attention系(正規化含む) か MLP系(正規化含む) かを判定する。
+// pre/post_feedforward_layernormはMLP側、input/post_attention_layernormはAttention側に属する。
+function subBlockOf(id: string): "attention" | "mlp" {
+  if (id.includes("mlp") || id.includes("feedforward")) return "mlp";
+  return "attention";
+}
+
 function toNormalNode(n: ModelNode, x: number, y: number): Node<NormalNodeData> {
   return {
     id: n.id,
@@ -69,17 +82,42 @@ function toNormalNode(n: ModelNode, x: number, y: number): Node<NormalNodeData> 
   };
 }
 
+function summaryNode(
+  id: string,
+  x: number,
+  y: number,
+  label: string,
+  nodeCount: number,
+  isExpanded: boolean,
+  groupKey: string
+): Node<LayerSummaryNodeData> {
+  return {
+    id,
+    type: "layerSummary",
+    position: { x, y },
+    data: { kind: "layerSummary", label, nodeCount, isExpanded, groupKey },
+  };
+}
+
 /**
  * バックエンド(Python)から受け取ったモデル構造を、
  * React Flowが描画できるノード/エッジ配列に変換する。
  *
- * expandedLayers に含まれないレイヤー番号は「折りたたみ」表示となり、
- * そのレイヤーの全ノードの代わりに1つの代表ノード(layer summary)だけを描画する。
- * ノード数が多いモデル(数十層)でも初期表示が重くならないようにするための対応。
+ * 3段階の折りたたみに対応:
+ *   段階1(デフォルト): "layer-N" が expandedGroups になければ、Layer全体を1ノードで表示
+ *   段階2: "layer-N" が展開済み、かつ "layer-N-attention"/"layer-N-mlp" が未展開なら、
+ *          Attentionブロック1ノード・MLPブロック1ノードの計2ノードで表示
+ *   段階3: さらに "layer-N-attention" (または "-mlp") も展開済みなら、
+ *          そのブロック内の個別ノード(Q/K/V/O等)まで展開する
+ *
+ * 列幅(x座標)は各層の展開状態に応じて動的に計算する。折りたたまれた層は
+ * 代表ノード1つぶんの幅しか使わないため、多くの層を折りたたんだままにしておけば
+ * 横幅を大きく節約できる。個別ノードまでの展開は列幅を追加で広げない
+ * (Q/K/V/O等は同じ列内で縦に並ぶため)。
  */
 export function toFlowGraph(
   result: ModelInspectResult,
-  expandedLayers: Set<number>
+  expandedGroups: Set<string>
 ): {
   nodes: Node[];
   edges: Edge[];
@@ -109,45 +147,91 @@ export function toFlowGraph(
 
   const sortedLayers = Array.from(nodesByLayer.keys()).sort((a, b) => a - b);
 
+  // 各層が実際に占める幅(展開状態に応じて動的)を先に計算し、
+  // 累積してx座標(列の開始位置)を決める。
+  let cursorX = 0;
+
   for (const layerIndex of sortedLayers) {
     const layerNodes = nodesByLayer.get(layerIndex)!;
-    const isExpanded = expandedLayers.has(layerIndex);
-    const x = layerIndex * LAYER_COLUMN_WIDTH;
+    const layerKey = `layer-${layerIndex}`;
+    const layerExpanded = expandedGroups.has(layerKey);
+    const x = cursorX;
 
-    const summaryData: LayerSummaryNodeData = {
-      kind: "layerSummary",
-      layerIndex,
-      nodeCount: layerNodes.length,
-      isExpanded,
-    };
-    nodes.push({
-      id: `layer-summary-${layerIndex}`,
-      type: "layerSummary",
-      position: { x, y: HEADER_ROW_Y },
-      data: summaryData,
-    });
+    // --- 段階1: Layer全体の代表ノード ---
+    nodes.push(
+      summaryNode(
+        `layer-summary-${layerIndex}`,
+        x,
+        HEADER_ROW_Y,
+        `Layer ${layerIndex}`,
+        layerNodes.length,
+        layerExpanded,
+        layerKey
+      )
+    );
 
-    if (!isExpanded) continue;
-
-    // 展開: レイヤー内の全ノードをパイプライン順で縦に並べる
-    const sorted = [...layerNodes].sort((a, b) => rowIndexForKey(a.id) - rowIndexForKey(b.id));
-    for (const n of sorted) {
-      const row = rowIndexForKey(n.id);
-      nodes.push(toNormalNode(n, x, row * ROW_HEIGHT));
+    if (!layerExpanded) {
+      cursorX += COLLAPSED_COLUMN_WIDTH + COLUMN_GAP;
+      continue;
     }
 
-    // レイヤー内のエッジも展開時のみ描画
-    for (const e of result.edges) {
-      if (sorted.some((n) => n.id === e.source) && sorted.some((n) => n.id === e.target)) {
-        edges.push({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          animated: false,
-          style: { stroke: "var(--border-strong)" },
-        });
+    // --- 段階2: Attention/MLPブロック単位に分割 ---
+    const attentionNodes = layerNodes.filter((n) => subBlockOf(n.id) === "attention");
+    const mlpNodes = layerNodes.filter((n) => subBlockOf(n.id) === "mlp");
+
+    const blocks: {
+      key: "attention" | "mlp";
+      label: string;
+      blockNodes: ModelNode[];
+    }[] = [
+      { key: "attention", label: `Attention (Layer ${layerIndex})`, blockNodes: attentionNodes },
+      { key: "mlp", label: `MLP (Layer ${layerIndex})`, blockNodes: mlpNodes },
+    ];
+
+    let subX = x;
+    for (const block of blocks) {
+      const blockGroupKey = `${layerKey}-${block.key}`;
+      const blockExpanded = expandedGroups.has(blockGroupKey);
+
+      nodes.push(
+        summaryNode(
+          `block-summary-${layerIndex}-${block.key}`,
+          subX,
+          0,
+          block.label,
+          block.blockNodes.length,
+          blockExpanded,
+          blockGroupKey
+        )
+      );
+
+      if (blockExpanded) {
+        // --- 段階3: 個別ノード(Q/K/V/O等)まで展開 ---
+        const sorted = [...block.blockNodes].sort(
+          (a, b) => rowIndexForKey(a.id) - rowIndexForKey(b.id)
+        );
+        for (const n of sorted) {
+          const row = rowIndexForKey(n.id);
+          nodes.push(toNormalNode(n, subX, (row + 1) * ROW_HEIGHT));
+        }
+
+        for (const e of result.edges) {
+          if (sorted.some((n) => n.id === e.source) && sorted.some((n) => n.id === e.target)) {
+            edges.push({
+              id: e.id,
+              source: e.source,
+              target: e.target,
+              animated: false,
+              style: { stroke: "var(--border-strong)" },
+            });
+          }
+        }
       }
+
+      subX += SUB_COLUMN_WIDTH;
     }
+
+    cursorX = subX + COLUMN_GAP;
   }
 
   return { nodes, edges };

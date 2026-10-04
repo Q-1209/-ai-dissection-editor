@@ -34,3 +34,8 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+
+# Local results / scratch
+python/token_journey_result.json
+*.result.json
+.pytest_cache/

@@ -190,6 +190,11 @@ def build_node_graph(model_dir: Path) -> dict[str, Any]:
         "nodes": nodes,
         "edges": edges,
         "errors": errors,
+        # Phase1の実行エンジン(LlamaGraphExecutor)がnum_attention_heads・
+        # num_key_value_heads・rope_theta等を必要とするため、config.jsonの
+        # 中身をそのまま持ち回す。可視化(Phase0)では使わないが、実行時に
+        # Electron/React側からそのままexecute_graph.pyへ渡せるようにするため。
+        "raw_config": config,
     }
 
 

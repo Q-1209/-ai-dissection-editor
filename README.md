@@ -1,120 +1,120 @@
-# AI Dissection Editor（解剖ビューア MVP）
+# AI Dissection Editor
 
-ローカルで動くTransformer系AIモデル(Llama/Mistral/Qwen/Gemma等、HuggingFace形式)を
-読み込み、その内部構造(Attention・MLP・正規化層など)を役割ラベル付きのノードグラフとして
-可視化するデスクトップアプリです。
+**Open a local LLM and work on its insides like parts on a bench.**
 
-既存のノードエディタ系ツール(ComfyUI等)の多くは「モデルを外部から呼び出して繋ぐ」ことに
-留まりますが、本ツールは「モデルを開いて中身を部品として扱う」ことを目指しています。
-将来的には複数モデルの連結・融合や、異なるアーキテクチャ間の部品差し替えまで見据えた、
-個人開発・自己資金0円からのOSSプロジェクトです。
+AI Dissection Editor is a desktop app that loads a local Hugging Face model (safetensors) and shows its internals (embeddings, attention, MLP, norms) as a node graph. From there you can:
 
-**現状のスコープは Phase 0（解剖ビューア = 構造の可視化のみ）です。** 推論の実行や
-モデル間の連結はまだ実装していません。詳しくは [未実装・今後の課題](#未実装今後の課題phase-1以降)
-を参照してください。
+- **rewire it**: reorder or skip layers, branch and merge them, then run generation on the graph you built
+- **watch it think**: attention heatmaps, activation statistics, token-by-token sensitivity, and a logit-lens-style "token journey"
+- **steer it**: add or ablate directions in the residual stream (activation steering, sycophancy and refusal directions) and compare the output side by side with the unmodified model
 
-**一緒に開発してくれる人を探しています。** Issue・PR・フィードバックいずれも歓迎です。
-興味があれば気軽にDiscussionsやIssueで声をかけてください。
+Most node-based AI tools (ComfyUI, LangFlow, Flowise) call a model from the outside. This one opens the model and treats its layers as the nodes.
 
-## 現在の対応状況
+> **Status: early, solo-developed, and I'm looking for feedback.** Everything below runs on my machine (Windows, Qwen2.5-0.5B-Instruct). I'm publishing now, before adding more features, to find out whether this is useful to anyone. If you try it, I'd love to hear what worked, what broke, and what you'd use it for. See [Feedback](#feedback).
 
-| アーキテクチャ | 状態 |
-| --- | --- |
-| Llama / Qwen | 実機動作確認済み(Qwen2.5-0.5B-Instruct、24層) |
-| Mistral(GQA含む) | ダミーデータで構造検証済み |
-| Gemma2 / Gemma3 | ダミーデータで構造検証済み |
-| Mamba / SSM系 | 未対応(キー命名規則が根本的に異なるため個別対応が必要) |
+<!-- TODO(漣): add a 20–30 s demo GIF here: docs/demo.gif -->
 
-## 構成
+## What it can do today
 
-```
-electron/
-  main.ts       Electronメインプロセス。ファイル選択ダイアログとPythonサブプロセス起動を担当
-  preload.ts    レンダラーに安全なAPIを公開するpreloadスクリプト
-python/
-  inspect_model.py   config.json + safetensorsヘッダーを読み、ノードグラフJSONを出力
-src/
-  App.tsx                       メイン画面
-  index.css                     デザイントークン(配色・タイポグラフィ)定義
-  lib/toFlowGraph.ts            解析結果 -> React Flow用ノード/エッジへの変換(折りたたみ対応)
-  components/NormalNode.tsx     通常ノードのカスタムReact Flowコンポーネント
-  components/LayerSummaryNode.tsx  レイヤー折りたたみ/展開ヘッダーのカスタムコンポーネント
-  components/Legend.tsx         役割ごとの色分け凡例
-  electron.d.ts                 window.electronAPIの型定義
-```
+| Tab | Feature | What you see |
+| --- | --- | --- |
+| **Dissect** (解剖) | Structure viewer | Every tensor in the checkpoint, labelled by role and grouped by layer. It only reads safetensors headers, so even multi-GB models open instantly. |
+| **Run** (実行) | Graph execution engine | Drag edges to reorder, skip, branch or merge attention/MLP blocks, then generate text. Includes a KV cache, temperature/top-k/top-p, repetition penalty and no-repeat n-gram, plus chat templates. |
+| **Observe** (観察) | Internal state | Attention heatmaps (per head or head average) and per-block activation stats, on linear or log scale |
+| | Prompt Sensitivity Map | Delete or replace each input token in turn and measure the KL divergence of the next-token distribution |
+| | Token Journey | The nearest vocabulary token to each hidden state, after every block |
+| | Multi-Model Battle View | The same prompt through two graphs or models, compared side by side |
+| | Neuron Search / Layer Ablation Wizard | Find neurons that respond to a prompt, knock out layers and measure the damage |
+| | Activation Steering Studio | Build a steering vector from contrastive prompt sets (mean difference), apply it to the layers you pick, and compare the generated text and KL divergence |
+| | Sycophancy / Refusal tuners | Presets for the "agreeing" and "refusing" directions. Addition and directional ablation are both supported. |
+| | Live Slider | Change the steering strength and watch the output update (experimental) |
 
-## 仕組み
+The inference engine is written from scratch in PyTorch (RMSNorm, RoPE, GQA attention, SwiGLU MLP) and does **not** depend on `transformers`. That independence is what lets the graph be rewired freely.
 
-1. 「モデルフォルダを開く」でHuggingFace形式のモデルディレクトリ（`config.json` +
-   `*.safetensors`）を選択
-2. Electronが `python/inspect_model.py` をサブプロセスとして起動
-3. Pythonスクリプトは safetensors の**ヘッダーのみ**を読む（重み本体はロードしない）ため、
-   数GBのモデルでも一瞬で構造を取得できる
-4. state_dictのキー名（例: `model.layers.0.self_attn.q_proj.weight`）を正規表現で
-   パースし、役割（Attention/MLP/正規化層など）とレイヤー番号を推定
-5. 結果をJSONでElectron経由React側に渡し、React Flowでグラフ描画。デフォルトは全層折りたたみ
-   表示で、レイヤーごとにクリックして展開/折りたたみができる
+### Things I found with it
 
-## 対応範囲（現時点）
+These are observations on Qwen2.5-0.5B-Instruct (24 layers):
 
-- モデル形式: safetensors のみ（`.bin` のpickle形式は非対応）
-- アーキテクチャ: 上記の対応状況表を参照。判定ロジックはHuggingFace `transformers`の
-  Llama系実装をベースにした命名規則（`self_attn.q/k/v/o_proj`、`mlp.gate/up/down_proj`、
-  `input_layernorm`、`post_attention_layernorm`、Gemma2/3では追加で
-  `pre_feedforward_layernorm`/`post_feedforward_layernorm`）に依存している
-- 依存: Python標準ライブラリのみで解析可能（`transformers` のインストール不要）。
-  Electron側からPythonを呼ぶため、実行環境に `python3`（Windowsでは`python`でも可、
-  `PYTHON_BIN`環境変数で指定）が必要
+- **Steering: one layer beats five.** A "thank you" vs. "this is the worst" vector (mean difference) added to 5 layers collapsed generation into repetition, even at scale 1. Added to one middle layer (layer 13) at scale 1, it shifted the tone (exclamation marks, a sudden "welcome!") without collapsing. The effect accumulates through the residual stream.
+- **Removing a refusal direction from one layer isn't enough.** With directional ablation on a single layer, refusals remained. Ablating every layer removed them, which matches [Arditi et al. 2024](https://arxiv.org/abs/2406.11717). Adding the direction instead made the model refuse harmless requests.
+- **Massive activations show up clearly.** Activation std jumps at layer 2, stays around 16–17 through layer 20, then falls off, consistent with [Sun et al. 2024](https://arxiv.org/abs/2402.17762).
+- **The question mark carries the question.** In "こんにちは、元気ですか？" ("Hi, how are you?"), deleting the final "？" moved the next-token distribution most (KL 5.73, compared with 0.04–0.44 for the other tokens).
 
-## セットアップ
+## Quick start
+
+Tested on **Windows** with **Qwen2.5-0.5B-Instruct** on CPU. macOS and Linux should work but haven't been tested yet. Reports are very welcome.
+
+**Requirements:** Node.js 22 LTS, Python 3.10+, Git, about 2 GB of disk for the small model.
 
 ```bash
+git clone https://github.com/Q-1209/-ai-dissection-editor.git
+cd -ai-dissection-editor
+
+# 1. Python side (CPU build of PyTorch is enough for 0.5B models)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
+
+# 2. Download a small model to try
+pip install -U huggingface_hub
+hf download Qwen/Qwen2.5-0.5B-Instruct --local-dir models/Qwen2.5-0.5B-Instruct
+
+# 3. App
 npm install
-```
-
-Python側は標準ライブラリのみで動作するため追加インストール不要です。
-`inspect_model.py` を直接動かして確認する場合:
-
-```bash
-python3 python/inspect_model.py /path/to/huggingface_model_dir
-```
-
-## 開発時の起動
-
-```bash
 npm run electron:dev
 ```
 
-Vite dev serverとElectronを同時に起動します（GUI環境が必要）。
+On Windows, tell the app which Python to use before starting it:
 
-## 配布ビルド
-
-```bash
-npm run electron:build
+```powershell
+$env:PYTHON_BIN = "python"      # PowerShell
+# set PYTHON_BIN=python         # cmd.exe
+npm run electron:dev
 ```
 
-`electron-builder` で各OS向けパッケージを `release/` に出力します。
+Then click **モデルフォルダを開く** ("Open model folder") and select `models/Qwen2.5-0.5B-Instruct`.
 
-## 未実装・今後の課題（Phase 1以降）
+> **Note: the UI is currently Japanese only.** The tab names are 解剖 = Dissect, 実行 = Run, 観察 = Observe. An English UI is the first thing I'll add if people want it, so please say so in an issue.
 
-- 複数モデルの同時ロードとノード間の実接続（現状は同一モデル内の可視化のみ）
-- Mamba/SSM系アーキテクチャへの対応
-- レイアウトの改善（現状はレイヤー番号×役割の単純グリッド配置）
-- 大規模モデル（分割safetensors・量子化モデル等）でのエッジケース検証
+### Supported models
 
-## 貢献方法
+| Architecture | Status |
+| --- | --- |
+| Qwen2 / Qwen2.5 (dense) | ✅ Verified on real weights (Qwen2.5-0.5B-Instruct) |
+| Llama-family dense (Llama, older dense Mistral) | 🟡 Should work. The structure is verified on dummy weights, but real weights haven't been tested yet. |
+| Gemma 2 / 3 | 🟡 The structure viewer works. The execution engine is not supported yet. |
+| MoE (Mixtral, recent Mistral/Gemma), Mamba/SSM, multimodal | ❌ Not supported |
 
-Issue・Pull Request・Discussionでのフィードバック、どれも歓迎です。特に以下のような
-貢献を歓迎しています。
+Only safetensors are supported (no `.bin` pickles). Quantized dtypes are untested.
 
-- 対応アーキテクチャの拡張（Mamba/SSM系、MoE系モデルなど）
-- 実モデルでの動作報告・不具合報告
-- UI/UXの改善提案
-- Phase 1（ノード連結機能）の設計・実装への参加
+## Responsible use
 
-大きな変更を加える前には、Issueで方向性を相談してもらえると助かります。
+The steering and refusal tools exist to **observe and understand** model behaviour, in the spirit of published interpretability research. Removing a refusal direction from a small local model doesn't make it more capable. It only shows where that behaviour lives. Please don't use this project to strip safeguards from models you deploy to other people, and follow the license of every model you load.
 
-## ライセンス
+## Development
 
-[MIT License](./LICENSE)
+```bash
+python -m pytest python/tests   # logic tests (numpy); one end-to-end test runs when torch is installed
+npx tsc -b && npx vite build    # type check and build the UI
+```
 
+The Electron main process spawns Python entry points (`python/*.py`) that speak JSON over stdin/stdout. The inference engine lives in `python/inference/`. A detailed (Japanese) development log, with design decisions and the bugs I hit along the way, is in [docs/DEVLOG.ja.md](docs/DEVLOG.ja.md).
+
+## Feedback
+
+I'm trying to learn whether this is worth continuing, and in which direction. The most useful things you can do:
+
+1. **Try it and open a ["I tried it" issue](../../issues/new?template=feedback.yml)**, even if it's a one-liner ("installed fine, attention view is neat, steering crashed on Llama-3.2-1B").
+2. **Report bugs** with the [bug template](../../issues/new?template=bug_report.yml).
+3. **Tell me which model you want supported next.**
+
+Pull requests are welcome too. For big changes, please open an issue first.
+
+## Roadmap (tentative)
+
+Next up, depending on feedback: an English UI, broader Llama/Mistral verification, and direct weight editing. Further out, I'm considering LoRA training, model diffing and auditing tools, and MoE support. Feedback decides the order.
+
+## License
+
+[MIT](LICENSE) © Q-1209
+
+[日本語のREADMEはこちら](README.ja.md)
