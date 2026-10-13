@@ -7,6 +7,15 @@ const isDev = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 
+/**
+ * Pythonの実行ファイル名。PYTHON_BIN環境変数があればそれを使う。
+ * Windowsでは "python3" がMicrosoft Storeの案内用スタブ(実行すると code 9009 で失敗)を指すことが多いため、
+ * 既定を "python" にする(2026-10-13、実機で model:inspect が code 9009 で失敗したため)。
+ */
+function defaultPythonBin(): string {
+  return process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -66,7 +75,7 @@ ipcMain.handle("model:inspect", async (_event, modelDir: string) => {
       ? path.join(__dirname, "../python/inspect_model.py")
       : path.join(process.resourcesPath, "python/inspect_model.py");
 
-    const pythonBin = process.env.PYTHON_BIN || "python3";
+    const pythonBin = defaultPythonBin();
     const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [
       scriptPath,
       modelDir,
@@ -136,7 +145,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/execute_graph.py")
         : path.join(process.resourcesPath, "python/execute_graph.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -216,7 +225,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/inspect_internals.py")
         : path.join(process.resourcesPath, "python/inspect_internals.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -292,7 +301,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/analyze_sensitivity.py")
         : path.join(process.resourcesPath, "python/analyze_sensitivity.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -367,7 +376,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/compute_token_journey.py")
         : path.join(process.resourcesPath, "python/compute_token_journey.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -448,7 +457,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/run_battle_view.py")
         : path.join(process.resourcesPath, "python/run_battle_view.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -533,7 +542,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/run_neuron_search.py")
         : path.join(process.resourcesPath, "python/run_neuron_search.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -607,7 +616,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/run_neuron_search.py")
         : path.join(process.resourcesPath, "python/run_neuron_search.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -692,7 +701,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/run_layer_ablation.py")
         : path.join(process.resourcesPath, "python/run_layer_ablation.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -788,7 +797,7 @@ ipcMain.handle(
         ? path.join(__dirname, "../python/run_activation_steering.py")
         : path.join(process.resourcesPath, "python/run_activation_steering.py");
 
-      const pythonBin = process.env.PYTHON_BIN || "python3";
+      const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
         env: { ...process.env, PYTHONIOENCODING: "utf-8" },
       });
@@ -897,7 +906,7 @@ ipcMain.handle(
     const scriptPath = isDev
       ? path.join(__dirname, "../python/run_live_session.py")
       : path.join(process.resourcesPath, "python/run_live_session.py");
-    const pythonBin = process.env.PYTHON_BIN || "python3";
+    const pythonBin = defaultPythonBin();
     const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
       env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
     });

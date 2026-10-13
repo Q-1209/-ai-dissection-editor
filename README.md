@@ -63,11 +63,11 @@ npm install
 npm run electron:dev
 ```
 
-On Windows, tell the app which Python to use before starting it:
+The app runs `python3` (`python` on Windows). If your Python with PyTorch has a different name or path, set `PYTHON_BIN` before starting:
 
 ```powershell
-$env:PYTHON_BIN = "python"      # PowerShell
-# set PYTHON_BIN=python         # cmd.exe
+$env:PYTHON_BIN = "C:\path\to\python.exe"   # PowerShell
+# set PYTHON_BIN=C:\path\to\python.exe        # cmd.exe
 npm run electron:dev
 ```
 
