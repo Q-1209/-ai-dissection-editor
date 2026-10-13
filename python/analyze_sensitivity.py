@@ -71,6 +71,7 @@ from inference.graph_validation import (  # noqa: E402
     topological_sort,
 )
 from inference.tokenizer_utils import TokenizerLoadError  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 
 def main() -> None:
@@ -111,17 +112,17 @@ def run_sensitivity(request: dict) -> dict:
     edges = [(e["source"], e["target"]) for e in request["edges"]]
 
     if not nodes:
-        raise GraphValidationError("グラフにノードが1つもありません。")
+        raise GraphValidationError(tr("グラフにノードが1つもありません。", "The graph has no nodes."))
 
     entry_candidates = [n.id for n in nodes if n.role == "embedding"]
     exit_candidates = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry_candidates) != 1:
         raise GraphValidationError(
-            f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。"
+            tr(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。", f"Exactly one embedding node is required (found {len(entry_candidates)}).")
         )
     if len(exit_candidates) != 1:
         raise GraphValidationError(
-            f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。"
+            tr(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。", f"Exactly one lm_head node is required (found {len(exit_candidates)}).")
         )
     entry_node_id = entry_candidates[0]
     exit_node_id = exit_candidates[0]
@@ -145,13 +146,13 @@ def run_sensitivity(request: dict) -> dict:
         )
         if len(input_ids_list) < 2:
             raise GraphValidationError(
-                "感度分析には2トークン以上の入力が必要です(1トークンでは削除/置換の比較ができません)。"
+                tr("感度分析には2トークン以上の入力が必要です(1トークンでは削除/置換の比較ができません)。", "Sensitivity analysis needs an input of 2 or more tokens (with 1 token there is nothing to delete or replace).")
             )
         input_tokens_text = [decode_tokens(tokenizer, [tid]) for tid in input_ids_list]
     else:
         input_ids_list = request.get("input_ids", [1, 2, 3, 4, 5])
         if len(input_ids_list) < 2:
-            raise GraphValidationError("感度分析には2トークン以上の入力が必要です。")
+            raise GraphValidationError(tr("感度分析には2トークン以上の入力が必要です。", "Sensitivity analysis needs an input of 2 or more tokens."))
 
     replacement_mode = request.get("replacement_mode", "pad")
     custom_token_id = request.get("custom_token_id")
@@ -159,7 +160,7 @@ def run_sensitivity(request: dict) -> dict:
     vocab_size = config.get("vocab_size")
 
     if replacement_mode == "custom" and custom_token_id is None:
-        raise GraphValidationError("replacement_mode='custom'の場合、custom_token_idが必須です。")
+        raise GraphValidationError(tr("replacement_mode='custom'の場合、custom_token_idが必須です。", "custom_token_id is required when replacement_mode='custom'."))
 
     # torchはここで初めてimportする(実際の重み読み込み・計算に入る直前)
     import torch  # noqa: PLC0415

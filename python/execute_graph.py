@@ -68,6 +68,7 @@ from inference.graph_validation import (  # noqa: E402
     topological_sort,
 )
 from inference.tokenizer_utils import TokenizerLoadError, resolve_stop_token_ids  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 
 def main() -> None:
@@ -108,17 +109,17 @@ def run_execution(request: dict) -> dict:
     edges = [(e["source"], e["target"]) for e in request["edges"]]
 
     if not nodes:
-        raise GraphValidationError("グラフにノードが1つもありません。")
+        raise GraphValidationError(tr("グラフにノードが1つもありません。", "The graph has no nodes."))
 
     entry_candidates = [n.id for n in nodes if n.role == "embedding"]
     exit_candidates = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry_candidates) != 1:
         raise GraphValidationError(
-            f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。"
+            tr(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。", f"Exactly one embedding node is required (found {len(entry_candidates)}).")
         )
     if len(exit_candidates) != 1:
         raise GraphValidationError(
-            f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。"
+            tr(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。", f"Exactly one lm_head node is required (found {len(exit_candidates)}).")
         )
     entry_node_id = entry_candidates[0]
     exit_node_id = exit_candidates[0]
@@ -150,7 +151,7 @@ def run_execution(request: dict) -> dict:
             use_chat_template=bool(request.get("use_chat_template", False)),
         )
         if not input_ids_list:
-            raise GraphValidationError("入力テキストのトークナイズ結果が空でした。")
+            raise GraphValidationError(tr("入力テキストのトークナイズ結果が空でした。", "The input text tokenized to nothing."))
     else:
         input_ids_list = request.get("input_ids", [1, 2, 3, 4, 5])  # 未指定時はダミートークン
 

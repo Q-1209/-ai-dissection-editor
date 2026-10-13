@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from .sycophancy_utils import count_sycophantic_phrases
 
-from .presets import preset
+from .presets import phrases, preset
 
 # 文例・定型語彙の実体は python/presets/steering_presets.json("refusal")にある(2026-09-22、一本化)。
 # REFUSAL_POSITIVE_PROMPTS: 拒否を引き出しやすい依頼文(実行可能な詳細を含まない短い依頼文)
@@ -31,7 +31,7 @@ from .presets import preset
 # DEFAULT_REFUSAL_PHRASES: 拒否応答によく現れる定型句(「できません」単体のような広すぎる語は含めない)
 REFUSAL_POSITIVE_PROMPTS: list[str] = list(preset("refusal")["positive_prompts"])
 REFUSAL_NEGATIVE_PROMPTS: list[str] = list(preset("refusal")["negative_prompts"])
-DEFAULT_REFUSAL_PHRASES: list[str] = list(preset("refusal")["phrases"])
+DEFAULT_REFUSAL_PHRASES: list[str] = phrases("refusal")  # 日本語＋英語(2026-10-13)
 
 
 def count_refusal_phrases(text: str, phrases: list[str] | None = None) -> dict[str, object]:

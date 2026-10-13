@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { LiveSweepPoint } from "../electron.d";
+import { useLang } from "../app/i18n";
 
 interface SweepChartProps {
   points: LiveSweepPoint[];
@@ -13,6 +14,7 @@ interface SweepChartProps {
  * 補助線は控えめ、今の倍率を縦の破線で示す。数値は下の表でも確認できる。
  */
 export function SweepChart({ points, currentScale, xLabel }: SweepChartProps) {
+  const { t } = useLang();
   const [hover, setHover] = useState<number | null>(null);
   const W = 560;
   const H = 220;
@@ -49,7 +51,7 @@ export function SweepChart({ points, currentScale, xLabel }: SweepChartProps) {
 
   return (
     <div style={{ position: "relative", maxWidth: W }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={`${xLabel}ごとのKLダイバージェンス`}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={t(`${xLabel}ごとのKLダイバージェンス`, `KL divergence by ${xLabel}`)}>
         {geo.yTicks.map((t) => (
           <g key={`y${t}`}>
             <line x1={M.left} x2={W - M.right} y1={geo.y(t)} y2={geo.y(t)} stroke="var(--border-default)" strokeWidth={1} />
@@ -106,10 +108,10 @@ export function SweepChart({ points, currentScale, xLabel }: SweepChartProps) {
             whiteSpace: "nowrap",
           }}
         >
-          <div>倍率 {formatNum(hovered.scale)}</div>
+          <div>{t("倍率", "Scale")} {formatNum(hovered.scale)}</div>
           <div>KL {hovered.kl.toFixed(4)}</div>
           <div style={{ color: "var(--text-secondary)" }}>
-            最有力: {JSON.stringify(hovered.top_token_text)}（{(hovered.top_prob * 100).toFixed(1)}%）
+            {t("最有力", "Top")}: {JSON.stringify(hovered.top_token_text)} ({(hovered.top_prob * 100).toFixed(1)}%)
           </div>
         </div>
       )}

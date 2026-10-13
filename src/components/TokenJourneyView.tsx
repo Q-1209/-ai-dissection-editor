@@ -1,4 +1,5 @@
 import type { NearestWordMatch } from "../electron.d";
+import { useLang } from "../app/i18n";
 
 interface TokenJourneyViewProps {
   blockOrder: string[];
@@ -28,6 +29,7 @@ export function TokenJourneyView({
   tokenLabels,
   shortenBlockId,
 }: TokenJourneyViewProps) {
+  const { t } = useLang();
   if (blockOrder.length === 0 || tokenLabels.length === 0) return null;
 
   return (
@@ -46,7 +48,7 @@ export function TokenJourneyView({
                 borderBottom: "1px solid var(--border-default)",
               }}
             >
-              トークン
+              {t("トークン", "Token")}
             </th>
             {blockOrder.map((blockId) => (
               <th

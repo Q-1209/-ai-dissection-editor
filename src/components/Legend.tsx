@@ -1,12 +1,15 @@
-const ROWS: { role: string; label: string; icon: string }[] = [
-  { role: "embedding", label: "埋め込み層", icon: "◧" },
-  { role: "attention", label: "Attention", icon: "◈" },
-  { role: "mlp", label: "MLP", icon: "▦" },
-  { role: "norm", label: "正規化層", icon: "≈" },
-  { role: "lm_head", label: "LM Head", icon: "◨" },
+import { useLang } from "../app/i18n";
+
+const ROWS: { role: string; label: string; labelEn: string; icon: string }[] = [
+  { role: "embedding", label: "埋め込み層", labelEn: "Embedding", icon: "◧" },
+  { role: "attention", label: "Attention", labelEn: "Attention", icon: "◈" },
+  { role: "mlp", label: "MLP", labelEn: "MLP", icon: "▦" },
+  { role: "norm", label: "正規化層", labelEn: "Norm", icon: "≈" },
+  { role: "lm_head", label: "LM Head", labelEn: "LM Head", icon: "◨" },
 ];
 
 export function Legend() {
+  const { t } = useLang();
   return (
     <div
       style={{
@@ -25,7 +28,7 @@ export function Legend() {
         color: "var(--text-primary)",
       }}
     >
-      {ROWS.map(({ role, label, icon }) => (
+      {ROWS.map(({ role, label, labelEn, icon }) => (
         <div key={role} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span
             style={{
@@ -44,7 +47,7 @@ export function Legend() {
           >
             {icon}
           </span>
-          <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+          <span style={{ color: "var(--text-secondary)" }}>{t(label, labelEn)}</span>
         </div>
       ))}
     </div>

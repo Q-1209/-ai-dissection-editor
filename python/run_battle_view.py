@@ -96,6 +96,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from inference.graph_validation import GraphValidationError  # noqa: E402
 from inference.tokenizer_utils import TokenizerLoadError, resolve_stop_token_ids  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 
 def main() -> None:
@@ -119,7 +120,7 @@ def main() -> None:
 def run_battle(request: dict) -> dict:
     model_specs = request.get("models", [])
     if not model_specs:
-        raise ValueError("'models' には少なくとも1つのモデルを指定してください。")
+        raise ValueError(tr("'models' には少なくとも1つのモデルを指定してください。", "Give at least one model in 'models'."))
 
     compare_generation = bool(request.get("compare_generation", True))
     compare_internals = bool(request.get("compare_internals", True))
@@ -195,7 +196,7 @@ def _run_single_model_inner(
             use_chat_template=bool(request.get("use_chat_template", False)),
         )
         if not input_ids_list:
-            raise GraphValidationError("入力テキストのトークナイズ結果が空でした。")
+            raise GraphValidationError(tr("入力テキストのトークナイズ結果が空でした。", "The input text tokenized to nothing."))
         from inference.tokenizer_utils import decode_tokens  # noqa: PLC0415
 
         input_tokens_text = [decode_tokens(tokenizer, [tid]) for tid in input_ids_list]

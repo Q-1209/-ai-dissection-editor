@@ -92,6 +92,7 @@ from inference.graph_validation import (  # noqa: E402
 )
 from inference.neuron_search_utils import rank_scored_neurons, resolve_target_layers  # noqa: E402
 from inference.tokenizer_utils import TokenizerLoadError  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 
 def main() -> None:
@@ -127,14 +128,14 @@ def _build_nodes_edges(request: dict) -> tuple[list[GraphNode], list[tuple[str, 
     edges = [(e["source"], e["target"]) for e in request["edges"]]
 
     if not nodes:
-        raise GraphValidationError("グラフにノードが1つもありません。")
+        raise GraphValidationError(tr("グラフにノードが1つもありません。", "The graph has no nodes."))
 
     entry_candidates = [n.id for n in nodes if n.role == "embedding"]
     exit_candidates = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry_candidates) != 1:
-        raise GraphValidationError(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。")
+        raise GraphValidationError(tr(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。", f"Exactly one embedding node is required (found {len(entry_candidates)})."))
     if len(exit_candidates) != 1:
-        raise GraphValidationError(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。")
+        raise GraphValidationError(tr(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。", f"Exactly one lm_head node is required (found {len(exit_candidates)})."))
     entry_node_id = entry_candidates[0]
     exit_node_id = exit_candidates[0]
 
@@ -168,7 +169,7 @@ def _tokenize(model_dir: Path, request: dict):
             use_chat_template=bool(request.get("use_chat_template", False)),
         )
         if not input_ids_list:
-            raise GraphValidationError("入力テキストのトークナイズ結果が空でした。")
+            raise GraphValidationError(tr("入力テキストのトークナイズ結果が空でした。", "The input text tokenized to nothing."))
         input_tokens_text = [decode_tokens(tokenizer, [tid]) for tid in input_ids_list]
     else:
         input_ids_list = request.get("input_ids", [1, 2, 3, 4, 5])
@@ -203,7 +204,7 @@ def run_neuron_search(request: dict) -> dict:
         return _run_rank(request)
     if mode == "probe":
         return _run_probe(request)
-    raise GraphValidationError(f"未知のmodeです: {mode!r} ('rank'または'probe'を指定してください)")
+    raise GraphValidationError(tr(f"未知のmodeです: {mode!r} ('rank'または'probe'を指定してください)", f"Unknown mode: {mode!r} (use 'rank' or 'probe')"))
 
 
 def _run_rank(request: dict) -> dict:
@@ -282,14 +283,14 @@ def _run_probe(request: dict) -> dict:
     neuron_index = request.get("neuron_index")
     if layer_index is None or kind not in ("mlp", "attention_head") or neuron_index is None:
         raise GraphValidationError(
-            "probeモードには layer_index, kind('mlp'または'attention_head'), neuron_index の指定が必要です。"
+            tr("probeモードには layer_index, kind('mlp'または'attention_head'), neuron_index の指定が必要です。", "Probe mode needs layer_index, kind ('mlp' or 'attention_head') and neuron_index.")
         )
     if layer_index < 0 or layer_index >= num_layers:
-        raise GraphValidationError(f"存在しない層番号です: {layer_index} (このモデルは{num_layers}層)")
+        raise GraphValidationError(tr(f"存在しない層番号です: {layer_index} (このモデルは{num_layers}層)", f"Layer index out of range: {layer_index} (this model has {num_layers} layers)"))
 
     input_texts = request.get("input_texts")
     if not input_texts:
-        raise GraphValidationError("probeモードには input_texts に1つ以上の入力文を指定してください。")
+        raise GraphValidationError(tr("probeモードには input_texts に1つ以上の入力文を指定してください。", "Probe mode needs at least one input in input_texts."))
 
     aggregation = request.get("aggregation", "max_abs")
 
@@ -305,7 +306,7 @@ def _run_probe(request: dict) -> dict:
         None,
     )
     if target_node is None:
-        raise GraphValidationError(f"層{layer_index}の{kind}ノードがグラフ内に見つかりません。")
+        raise GraphValidationError(tr(f"層{layer_index}の{kind}ノードがグラフ内に見つかりません。", f"No {kind} node for layer {layer_index} in the graph."))
 
     attn_key, mlp_key = _capture_keys_for_node(target_node)
     capture_key = attn_key if kind == "attention_head" else mlp_key
@@ -321,7 +322,7 @@ def _run_probe(request: dict) -> dict:
             kv_cache={}, position_offset=0, neuron_capture=neuron_capture,
         )
         if capture_key not in neuron_capture:
-            raise GraphValidationError(f"指定ノードの内部状態が記録されませんでした({capture_key})。")
+            raise GraphValidationError(tr(f"指定ノードの内部状態が記録されませんでした({capture_key})。", f"The internal state of the node was not recorded ({capture_key})."))
 
         tensor = neuron_capture[capture_key][0]  # batch=1を除去
         if kind == "mlp":
@@ -330,7 +331,7 @@ def _run_probe(request: dict) -> dict:
 
         if neuron_index < 0 or neuron_index >= tensor.shape[0]:
             raise GraphValidationError(
-                f"neuron_indexが範囲外です: {neuron_index} (0〜{tensor.shape[0] - 1})"
+                tr(f"neuron_indexが範囲外です: {neuron_index} (0〜{tensor.shape[0] - 1})", f"neuron_index out of range: {neuron_index} (0-{tensor.shape[0] - 1})")
             )
 
         neuron_series = tensor[neuron_index]  # [seq_len]

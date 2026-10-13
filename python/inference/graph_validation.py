@@ -10,6 +10,7 @@ graph_runner.py (torch依存)が担当する。
 from __future__ import annotations
 
 from dataclasses import dataclass
+from .i18n import tr
 
 
 class GraphValidationError(Exception):
@@ -119,8 +120,8 @@ def build_input_map_multi(
 
     if unreachable:
         raise GraphValidationError(
-            f"以下のノードはどこからも接続されておらず、実行できません(グラフから孤立しています): "
-            f"{sorted(unreachable)}。ノード同士を接続してください。"
+            tr(f"以下のノードはどこからも接続されておらず、実行できません(グラフから孤立しています): "
+            f"{sorted(unreachable)}。ノード同士を接続してください。", f"These nodes are not connected to anything and cannot run (isolated from the graph): " f"{sorted(unreachable)}. Connect them to the graph.")
         )
 
     return input_map
@@ -142,9 +143,9 @@ def build_input_map(
     merged = [nid for nid, sources in multi_map.items() if len(sources) > 1]
     if merged:
         raise GraphValidationError(
-            f"以下のノードは複数の入力を受け取っています: {sorted(merged)}。"
+            tr(f"以下のノードは複数の入力を受け取っています: {sorted(merged)}。"
             f"このグラフでは単純な直列接続のみサポートしており、複数ノードの出力を"
-            f"1つのノードに合流させることはできません。"
+            f"1つのノードに合流させることはできません。", f"These nodes receive more than one input: {sorted(merged)}. " f"This graph only supports simple chains; outputs of several nodes " f"cannot be merged into one node here.")
         )
 
     return {nid: sources[0] for nid, sources in multi_map.items()}
@@ -159,8 +160,8 @@ def validate_shape_compatibility(
     """
     if source_last_dim != target_expected_dim:
         raise GraphValidationError(
-            f"Shape mismatch: '{source_id}' outputs dim {source_last_dim}, "
+            tr(f"Shape mismatch: '{source_id}' outputs dim {source_last_dim}, "
             f"but '{target_id}' expects dim {target_expected_dim}. "
             f"Phase1では自動アダプター変換をサポートしていません。"
-            f"同じhidden_sizeを持つノード同士のみ接続できます。"
+            f"同じhidden_sizeを持つノード同士のみ接続できます。", f"Shape mismatch: '{source_id}' outputs dim {source_last_dim}, " f"but '{target_id}' expects dim {target_expected_dim}. " f"No adapter is inserted automatically; " f"only nodes with the same hidden_size can be connected.")
         )

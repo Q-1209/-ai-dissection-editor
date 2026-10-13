@@ -77,6 +77,7 @@ from inference.graph_validation import (  # noqa: E402
     topological_sort,
 )
 from inference.tokenizer_utils import TokenizerLoadError, resolve_stop_token_ids  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 
 def main() -> None:
@@ -113,7 +114,7 @@ def mark_ablated_nodes(nodes: list[GraphNode], ablate_ids) -> None:
     unmatched = ablate_set - node_ids
     if unmatched:
         raise GraphValidationError(
-            f"無効化対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}"
+            tr(f"無効化対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}", f"Node IDs to ablate are not in the graph: {sorted(unmatched)}")
         )
     for n in nodes:
         n.ablated = n.id in ablate_set
@@ -130,14 +131,14 @@ def _build_nodes_edges(request: dict) -> tuple[list[GraphNode], list[tuple[str, 
     edges = [(e["source"], e["target"]) for e in request["edges"]]
 
     if not nodes:
-        raise GraphValidationError("グラフにノードが1つもありません。")
+        raise GraphValidationError(tr("グラフにノードが1つもありません。", "The graph has no nodes."))
 
     entry_candidates = [n.id for n in nodes if n.role == "embedding"]
     exit_candidates = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry_candidates) != 1:
-        raise GraphValidationError(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。")
+        raise GraphValidationError(tr(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。", f"Exactly one embedding node is required (found {len(entry_candidates)})."))
     if len(exit_candidates) != 1:
-        raise GraphValidationError(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。")
+        raise GraphValidationError(tr(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。", f"Exactly one lm_head node is required (found {len(exit_candidates)})."))
     entry_node_id = entry_candidates[0]
     exit_node_id = exit_candidates[0]
 
@@ -154,13 +155,13 @@ def run_ablation(request: dict) -> dict:
 
     ablate_node_ids = request.get("ablate_node_ids", [])
     if not ablate_node_ids:
-        raise GraphValidationError("無効化するノードを1つ以上指定してください。")
+        raise GraphValidationError(tr("無効化するノードを1つ以上指定してください。", "Pick at least one node to ablate."))
     # 事前に妥当性だけ確認しておく(実際に立てるのは後段、baseline計算の後)
     mark_ablated_nodes(nodes, [])
     unmatched = set(ablate_node_ids) - {n.id for n in nodes}
     if unmatched:
         raise GraphValidationError(
-            f"無効化対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}"
+            tr(f"無効化対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}", f"Node IDs to ablate are not in the graph: {sorted(unmatched)}")
         )
 
     import torch  # noqa: PLC0415
@@ -183,7 +184,7 @@ def run_ablation(request: dict) -> dict:
             use_chat_template=bool(request.get("use_chat_template", False)),
         )
         if not input_ids_list:
-            raise GraphValidationError("入力テキストのトークナイズ結果が空でした。")
+            raise GraphValidationError(tr("入力テキストのトークナイズ結果が空でした。", "The input text tokenized to nothing."))
         input_tokens_text = [decode_tokens(tokenizer, [tid]) for tid in input_ids_list]
     else:
         input_ids_list = request.get("input_ids", [1, 2, 3, 4, 5])

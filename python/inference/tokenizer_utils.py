@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from .i18n import tr
 
 
 class TokenizerLoadError(Exception):
@@ -50,17 +51,17 @@ def load_tokenizer(model_dir: Path):
     tokenizer_path = model_dir / "tokenizer.json"
     if not tokenizer_path.exists():
         raise TokenizerLoadError(
-            f"tokenizer.json が見つかりません: {tokenizer_path}。"
+            tr(f"tokenizer.json が見つかりません: {tokenizer_path}。"
             f"このモデルディレクトリにHuggingFace形式のトークナイザーファイルが"
-            f"含まれているか確認してください。"
+            f"含まれているか確認してください。", f"tokenizer.json not found: {tokenizer_path}. " f"Check that the model folder contains a Hugging Face " f"tokenizer file.")
         )
 
     try:
         from tokenizers import Tokenizer  # noqa: PLC0415
     except ImportError as e:
         raise TokenizerLoadError(
-            "tokenizersライブラリがインストールされていません。"
-            "`pip install tokenizers` を実行してください。"
+            tr("tokenizersライブラリがインストールされていません。"
+            "`pip install tokenizers` を実行してください。", "The tokenizers library is not installed. " "Run `pip install tokenizers`.")
         ) from e
 
     return Tokenizer.from_file(str(tokenizer_path))
@@ -156,7 +157,7 @@ def render_builtin_chat_prompt(
         bos = bos_token or "<s>"
         body = f"{system_prompt}\n\n{user_text}" if system_prompt else user_text
         return f"{bos}[INST] {body} [/INST]"
-    raise ChatTemplateError(f"未対応のチャットテンプレート形式です: {family}")
+    raise ChatTemplateError(tr(f"未対応のチャットテンプレート形式です: {family}", f"Unsupported chat template format: {family}"))
 
 
 def _render_with_jinja(template: str, messages: list[dict], bos_token: str | None, eos_token: str | None) -> str:
@@ -167,7 +168,7 @@ def _render_with_jinja(template: str, messages: list[dict], bos_token: str | Non
     from jinja2.sandbox import ImmutableSandboxedEnvironment  # noqa: PLC0415
 
     def raise_exception(message):
-        raise ChatTemplateError(f"チャットテンプレートがエラーを返しました: {message}")
+        raise ChatTemplateError(tr(f"チャットテンプレートがエラーを返しました: {message}", f"The chat template raised an error: {message}"))
 
     def tojson(value, indent=None):
         return json.dumps(value, ensure_ascii=False, indent=indent)
@@ -200,9 +201,9 @@ def render_chat_prompt(model_dir: Path, user_text: str, system_prompt: str | Non
     template = select_chat_template(config)
     if template is None:
         raise ChatTemplateError(
-            "このモデルの tokenizer_config.json に chat_template がありません"
+            tr("このモデルの tokenizer_config.json に chat_template がありません"
             "(Instructモデルではなくベースモデルの可能性があります)。"
-            "「チャットテンプレート適用」をオフにして実行してください。"
+            "「チャットテンプレート適用」をオフにして実行してください。", "This model's tokenizer_config.json has no chat_template " "(it may be a base model rather than an Instruct model). " "Turn off \"Use chat template\" and run again.")
         )
     bos_token = _token_content(config.get("bos_token"))
     eos_token = _token_content(config.get("eos_token"))
@@ -218,8 +219,8 @@ def render_chat_prompt(model_dir: Path, user_text: str, system_prompt: str | Non
         family = detect_template_family(template)
         if family is None:
             raise ChatTemplateError(
-                "Jinja2ライブラリが無く、このモデルのチャットテンプレート形式も自動判定できませんでした。"
-                "`pip install jinja2` を実行してください。"
+                tr("Jinja2ライブラリが無く、このモデルのチャットテンプレート形式も自動判定できませんでした。"
+                "`pip install jinja2` を実行してください。", "Jinja2 is not installed and this model's chat template format could not be detected. " "Run `pip install jinja2`.")
             ) from None
         return render_builtin_chat_prompt(family, user_text, system_prompt, bos_token)
     except ChatTemplateError:
@@ -227,7 +228,7 @@ def render_chat_prompt(model_dir: Path, user_text: str, system_prompt: str | Non
     except Exception as e:  # noqa: BLE001 (Jinja2の構文エラー等)
         family = detect_template_family(template)
         if family is None:
-            raise ChatTemplateError(f"チャットテンプレートの描画に失敗しました: {e}") from e
+            raise ChatTemplateError(tr(f"チャットテンプレートの描画に失敗しました: {e}", f"Failed to render the chat template: {e}")) from e
         return render_builtin_chat_prompt(family, user_text, system_prompt, bos_token)
 
 
@@ -278,7 +279,7 @@ def encode_text(
     """
     if use_chat_template:
         if model_dir is None:
-            raise ChatTemplateError("use_chat_template=True の場合は model_dir が必要です。")
+            raise ChatTemplateError(tr("use_chat_template=True の場合は model_dir が必要です。", "model_dir is required when use_chat_template=True."))
         prompt = render_chat_prompt(Path(model_dir), text)
         return tokenizer.encode(prompt, add_special_tokens=False).ids
     encoding = tokenizer.encode(text)

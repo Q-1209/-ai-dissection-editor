@@ -6,6 +6,9 @@ import { contextBridge, ipcRenderer } from "electron";
  * メインプロセスの機能(ファイルダイアログ、Python起動)にアクセスできる。
  */
 contextBridge.exposeInMainWorld("electronAPI", {
+  // 2026-10-13: 表示言語をメインプロセスに伝える(Pythonのエラー文の言語になる)
+  setLang: (lang: "ja" | "en"): void => ipcRenderer.send("lang:set", lang),
+
   selectModelDir: (): Promise<string | null> =>
     ipcRenderer.invoke("dialog:selectModelDir"),
 

@@ -10,6 +10,7 @@ import type {
 } from "../electron.d";
 import { buttonStyle } from "../app/styles";
 import { SweepChart } from "./SweepChart";
+import { useLang } from "../app/i18n";
 
 /**
  * Live Slider(Phase3、2026-09-24追加): スライダーによるリアルタイム出力操作。
@@ -83,6 +84,7 @@ export function appendPiece(pieces: TokenPiece[], nextText: string, piece: Omit<
 }
 
 export function LiveSliderPanel(props: LiveSliderPanelProps) {
+  const { t, lang } = useLang();
   const { modelDir, config, nodes, edges, useChatTemplate } = props;
 
   const scalableNodes = useMemo(
@@ -113,7 +115,7 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
   const [steeringBusy, setSteeringBusy] = useState(false);
   const [appliedVersion, setAppliedVersion] = useState(0);
 
-  const [inputText, setInputText] = useState("こんにちは");
+  const [inputText, setInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [maxNewTokens, setMaxNewTokens] = useState(60);
   const [compareBaseline, setCompareBaseline] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -179,7 +181,7 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
           setGenerating(false);
           setSweepBusy(false);
           setSteeringBusy(false);
-          if (ev.code !== 0 && ev.stderr) setLastError(`セッションが終了しました(code ${ev.code}): ${ev.stderr.slice(-600)}`);
+          if (ev.code !== 0 && ev.stderr) setLastError(`${t("セッションが終了しました", "The session ended")} (code ${ev.code}): ${ev.stderr.slice(-600)}`);
           break;
       }
     });
@@ -263,21 +265,21 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
   const sweepTargets = useMemo(() => {
     const list: { key: string; label: string; target: LiveSweepTarget; current: number }[] = [];
     for (const id of Object.keys(nodeScales)) {
-      list.push({ key: `node:${id}`, label: `層/ブロック ${id}`, target: { type: "node", id }, current: nodeScales[id] });
+      list.push({ key: `node:${id}`, label: `${t("層/ブロック", "Layer/block")} ${id}`, target: { type: "node", id }, current: nodeScales[id] });
     }
     for (const n of neurons) {
       list.push({
         key: `neuron:${neuronKey(n)}`,
-        label: `ニューロン L${n.layer} ${n.kind === "mlp" ? "MLP" : "Head"} #${n.index}`,
+        label: `${t("ニューロン", "Neuron")} L${n.layer} ${n.kind === "mlp" ? "MLP" : "Head"} #${n.index}`,
         target: { type: "neuron", layer: n.layer, kind: n.kind, index: n.index },
         current: n.scale,
       });
     }
     if (steeringNorms) {
-      list.push({ key: "steering", label: "ステアリングの強さ", target: { type: "steering" }, current: steeringScale });
+      list.push({ key: "steering", label: t("ステアリングの強さ", "Steering strength"), target: { type: "steering" }, current: steeringScale });
     }
     return list;
-  }, [nodeScales, neurons, steeringNorms, steeringScale]);
+  }, [nodeScales, neurons, steeringNorms, steeringScale, t]);
 
   const runSweep = useCallback(() => {
     const t = sweepTargets.find((s) => s.key === sweepTargetKey);
@@ -298,11 +300,11 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
   const neuronFormError = useMemo(() => {
     if (!limits) return null;
     const { layer, kind, index } = neuronForm;
-    if (!Number.isInteger(layer) || layer < 0 || layer >= limits.num_layers) return `層は 0〜${limits.num_layers - 1}`;
+    if (!Number.isInteger(layer) || layer < 0 || layer >= limits.num_layers) return t(`層は 0〜${limits.num_layers - 1}`, `layer must be 0–${limits.num_layers - 1}`);
     const upper = kind === "mlp" ? limits.intermediate_size : limits.num_heads;
-    if (!Number.isInteger(index) || index < 0 || index >= upper) return `${kind === "mlp" ? "MLP次元" : "ヘッド"}は 0〜${upper - 1}`;
+    if (!Number.isInteger(index) || index < 0 || index >= upper) return t(`${kind === "mlp" ? "MLP次元" : "ヘッド"}は 0〜${upper - 1}`, `${kind === "mlp" ? "MLP dim" : "head"} must be 0–${upper - 1}`);
     return null;
-  }, [limits, neuronForm]);
+  }, [limits, neuronForm, t]);
 
   const ready = status === "ready";
   const stale = ready && sessionSignature !== graphSignature;
@@ -312,39 +314,39 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
     <div style={{ width: "100%", height: "100%", overflow: "auto", padding: 20, display: "flex", gap: 20 }}>
       {/* ---------------- 左: コントロール ---------------- */}
       <div style={{ flex: "0 0 330px", display: "flex", flexDirection: "column", gap: 14 }}>
-        <Section title="セッション">
+        <Section title={t("セッション", "Session")}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <button onClick={startSession} style={buttonStyle} disabled={status === "starting"}>
-              {ready || status === "exited" ? "再開始" : "開始(モデル読み込み)"}
+              {ready || status === "exited" ? t("再開始", "Restart") : t("開始(モデル読み込み)", "Start (load model)")}
             </button>
             <button onClick={stopSession} style={buttonStyle} disabled={!ready && status !== "starting"}>
-              終了
+              {t("終了", "End")}
             </button>
             <span style={{ fontSize: 11, color: ready ? "var(--accent-text)" : "var(--text-muted)" }}>
-              {status === "stopped" && "未開始"}
-              {status === "starting" && "読み込み中..."}
-              {ready && `準備完了(反映済み v${appliedVersion})`}
-              {status === "exited" && "終了しました"}
+              {status === "stopped" && t("未開始", "Not started")}
+              {status === "starting" && t("読み込み中...", "Loading...")}
+              {ready && t(`準備完了(反映済み v${appliedVersion})`, `Ready (applied v${appliedVersion})`)}
+              {status === "exited" && t("終了しました", "Ended")}
             </span>
           </div>
           {stale && (
-            <Note>グラフまたはチャットテンプレート設定が変わりました。反映するには「再開始」を押してください。</Note>
+            <Note>{t("グラフまたはチャットテンプレート設定が変わりました。反映するには「再開始」を押してください。", "The graph or chat template setting changed. Press Restart to apply it.")}</Note>
           )}
-          <Note>チャットテンプレート: {useChatTemplate ? "適用(ヘッダーで切り替え)" : "なし(ヘッダーで切り替え)"}</Note>
+          <Note>{t("チャットテンプレート", "Chat template")}: {useChatTemplate ? t("適用(ヘッダーで切り替え)", "on (toggle in the header)") : t("なし(ヘッダーで切り替え)", "off (toggle in the header)")}</Note>
         </Section>
 
-        <Section title="層・ブロックの倍率" hint="ブロックが足す分(残差への寄与)に掛ける。1=通常、0=素通り、2=強調">
+        <Section title={t("層・ブロックの倍率", "Layer / block scale")} hint={t("ブロックが足す分(残差への寄与)に掛ける。1=通常、0=素通り、2=強調", "Multiplies what the block adds to the residual stream. 1 = normal, 0 = bypass, 2 = amplify")}>
           <div style={{ display: "flex", gap: 6 }}>
             <select value={nodeToAdd} onChange={(e) => setNodeToAdd(e.target.value)}
               style={{ ...buttonStyle, background: "var(--bg-app)", flex: 1, minWidth: 0 }}>
-              <option value="">ノードを選択</option>
+              <option value="">{t("ノードを選択", "Select a node")}</option>
               {scalableNodes.filter((n) => !(n.id in nodeScales)).map((n) => (
                 <option key={n.id} value={n.id}>{n.id}</option>
               ))}
             </select>
             <button style={buttonStyle} disabled={!nodeToAdd}
               onClick={() => { setNodeScales((p) => ({ ...p, [nodeToAdd]: 1 })); setNodeToAdd(""); }}>
-              追加
+              {t("追加", "Add")}
             </button>
           </div>
           {Object.entries(nodeScales).map(([id, v]) => (
@@ -354,9 +356,9 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
           ))}
         </Section>
 
-        <Section title="ニューロンの倍率" hint="MLP中間層の1次元、またはAttentionの1ヘッド。Neuron Searchで見つけた番号を入れる">
+        <Section title={t("ニューロンの倍率", "Neuron scale")} hint={t("MLP中間層の1次元、またはAttentionの1ヘッド。Neuron Searchで見つけた番号を入れる", "One MLP hidden dimension or one attention head. Use an index found with Neuron Search")}>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <label style={labelStyle}>層
+            <label style={labelStyle}>{t("層", "Layer")}
               <input type="number" min={0} max={(limits?.num_layers ?? 1) - 1} value={neuronForm.layer}
                 onChange={(e) => setNeuronForm((f) => ({ ...f, layer: Number(e.target.value) }))}
                 style={{ ...numberStyle, width: 52 }} />
@@ -364,25 +366,25 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
             <select value={neuronForm.kind}
               onChange={(e) => setNeuronForm((f) => ({ ...f, kind: e.target.value as LiveNeuronKind }))}
               style={{ ...buttonStyle, background: "var(--bg-app)" }}>
-              <option value="mlp">MLP次元</option>
-              <option value="attention_head">ヘッド</option>
+              <option value="mlp">{t("MLP次元", "MLP dim")}</option>
+              <option value="attention_head">{t("ヘッド", "Head")}</option>
             </select>
-            <label style={labelStyle}>番号
+            <label style={labelStyle}>{t("番号", "Index")}
               <input type="number" min={0} value={neuronForm.index}
                 onChange={(e) => setNeuronForm((f) => ({ ...f, index: Number(e.target.value) }))}
                 style={{ ...numberStyle, width: 64 }} />
             </label>
             <button style={buttonStyle} disabled={!limits || neuronFormError !== null}
-              title={!limits ? "セッションを開始すると追加できます" : neuronFormError ?? ""}
+              title={!limits ? t("セッションを開始すると追加できます", "Start a session to add") : neuronFormError ?? ""}
               onClick={() => setNeurons((p) =>
                 p.some((n) => neuronKey(n) === neuronKey(neuronForm)) ? p : [...p, { ...neuronForm, scale: 1 }])}>
-              追加
+              {t("追加", "Add")}
             </button>
           </div>
           {limits && (
             <Note>
-              層 0〜{limits.num_layers - 1} / MLP次元 0〜{limits.intermediate_size - 1} / ヘッド 0〜{limits.num_heads - 1}
-              {neuronFormError && <span style={{ color: "#e08a8a" }}>(範囲外: {neuronFormError})</span>}
+              {t("層", "Layer")} 0–{limits.num_layers - 1} / {t("MLP次元", "MLP dim")} 0–{limits.intermediate_size - 1} / {t("ヘッド", "Head")} 0–{limits.num_heads - 1}
+              {neuronFormError && <span style={{ color: "#e08a8a" }}>({t("範囲外", "out of range")}: {neuronFormError})</span>}
             </Note>
           )}
           {neurons.map((n) => (
@@ -394,27 +396,27 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
           ))}
         </Section>
 
-        <Section title="ステアリングの強さ"
-          hint="Activation Steeringタブの対照プロンプト・対象ノードでベクトルを作り、強さだけをここで動かす">
+        <Section title={t("ステアリングの強さ", "Steering strength")}
+          hint={t("Activation Steeringタブの対照プロンプト・対象ノードでベクトルを作り、強さだけをここで動かす", "The vector comes from the prompts and nodes in the Activation Steering tab. Only its strength is set here.")}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <button style={buttonStyle} onClick={computeSteering}
               disabled={!ready || steeringBusy || props.steeringTargetNodeIds.length === 0 ||
                 props.steeringPositivePrompts.length === 0 || props.steeringNegativePrompts.length === 0}>
-              {steeringBusy ? "計算中..." : steeringNorms ? "ベクトルを再計算" : "ベクトルを計算"}
+              {steeringBusy ? t("計算中...", "Computing...") : steeringNorms ? t("ベクトルを再計算", "Recompute vector") : t("ベクトルを計算", "Compute vector")}
             </button>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              対象 {props.steeringTargetNodeIds.length}ノード / positive {props.steeringPositivePrompts.length}件 /
-              negative {props.steeringNegativePrompts.length}件
+              {t("対象", "Targets")} {props.steeringTargetNodeIds.length} / positive {props.steeringPositivePrompts.length} /
+              negative {props.steeringNegativePrompts.length}
             </span>
           </div>
           {steeringNorms ? (
-            <SliderRow label="強さ" value={steeringScale} range={STEERING_RANGE} onChange={setSteeringScale} />
+            <SliderRow label={t("強さ", "Strength")} value={steeringScale} range={STEERING_RANGE} onChange={setSteeringScale} />
           ) : (
-            <Note>先にベクトルを計算してください(対象ノードはActivation Steeringタブで選択)。</Note>
+            <Note>{t("先にベクトルを計算してください(対象ノードはActivation Steeringタブで選択)。", "Compute the vector first (pick target nodes in the Activation Steering tab).")}</Note>
           )}
         </Section>
 
-        <button style={buttonStyle} onClick={resetAll}>すべて通常に戻す</button>
+        <button style={buttonStyle} onClick={resetAll}>{t("すべて通常に戻す", "Reset all")}</button>
 
         {lastError && (
           <div style={{ color: "#e08a8a", fontSize: 11.5, whiteSpace: "pre-wrap" }}>{lastError}</div>
@@ -424,50 +426,50 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
       {/* ---------------- 右: 生成とスイープ ---------------- */}
       <div style={{ flex: "1 1 auto", minWidth: 320, display: "flex", flexDirection: "column", gap: 18 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="入力テキスト"
+          <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={t("入力テキスト", "Input text")}
             style={{ ...buttonStyle, cursor: "text", width: 260, background: "var(--bg-app)" }} />
-          <label style={labelStyle}>トークン数
+          <label style={labelStyle}>{t("トークン数", "Tokens")}
             <input type="number" min={1} max={512} value={maxNewTokens}
               onChange={(e) => setMaxNewTokens(Math.max(1, Number(e.target.value) || 1))}
               style={{ ...numberStyle, width: 60 }} />
           </label>
           <label style={labelStyle}>
             <input type="checkbox" checked={compareBaseline} onChange={(e) => setCompareBaseline(e.target.checked)} />
-            通常時も生成して比較
+            {t("通常時も生成して比較", "Also generate normally to compare")}
           </label>
           {!generating ? (
             <button onClick={generate} disabled={!ready}
               style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}>
-              生成
+              {t("生成", "Generate")}
             </button>
           ) : (
-            <button onClick={stopGeneration} style={buttonStyle}>停止</button>
+            <button onClick={stopGeneration} style={buttonStyle}>{t("停止", "Stop")}</button>
           )}
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            生成中にスライダーを動かすと、次のトークンから反映されます
+            {t("生成中にスライダーを動かすと、次のトークンから反映されます", "Move a slider while generating and it applies from the next token")}
           </span>
         </div>
 
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          <Stat label="直近トークンのKL(通常時→操作後)" value={lastKl === null ? "—" : lastKl.toFixed(4)} />
-          <Stat label="平均KL / 最大KL"
+          <Stat label={t("直近トークンのKL(通常時→操作後)", "Last-token KL (normal → modified)")} value={lastKl === null ? "—" : lastKl.toFixed(4)} />
+          <Stat label={t("平均KL / 最大KL", "Mean KL / max KL")}
             value={doneInfo ? `${doneInfo.mean_kl.toFixed(4)} / ${doneInfo.max_kl.toFixed(4)}` : "—"} />
-          <Stat label="終了理由" value={doneInfo ? REASON_LABEL[doneInfo.reason] ?? doneInfo.reason : generating ? "生成中" : "—"} />
+          <Stat label={t("終了理由", "Stop reason")} value={doneInfo ? (REASON_LABEL[doneInfo.reason] ? t(...REASON_LABEL[doneInfo.reason]) : doneInfo.reason) : generating ? t("生成中", "Generating") : "—"} />
         </div>
 
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           {compareBaseline && (
-            <TextPane title="通常時">
-              {baselineText === null ? (generating ? "生成中..." : "") : baselineText || "(空)"}
+            <TextPane title={t("通常時", "Normal")}>
+              {baselineText === null ? (generating ? t("生成中...", "Generating...") : "") : baselineText || t("(空)", "(empty)")}
             </TextPane>
           )}
-          <TextPane title="操作後(背景色の切り替わり=スライダーの値が変わった位置、点線の下線=最有力トークンが通常時と違う)" accent>
+          <TextPane title={t("操作後(背景色の切り替わり=スライダーの値が変わった位置、点線の下線=最有力トークンが通常時と違う)", "Modified (background change = where a slider changed; dotted underline = top token differs from normal)")} accent>
             {pieces.length === 0
-              ? generating ? "生成中..." : ""
+              ? generating ? t("生成中...", "Generating...") : ""
               : segmentIndexes(pieces).map((seg, i) => {
                   const p = pieces[i];
                   return (
-                    <span key={i} title={`KL ${p.kl.toFixed(4)} / スライダー設定 v${p.version}`}
+                    <span key={i} title={`KL ${p.kl.toFixed(4)} / ${t("スライダー設定", "slider settings")} v${p.version}`}
                       style={{
                         background: seg % 2 === 1 ? "rgba(91,155,213,0.32)" : "transparent",
                         textDecoration: p.changed ? "underline dotted" : "none",
@@ -479,45 +481,46 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
           </TextPane>
         </div>
 
-        <Section title="倍率スイープ(倍率ごとのKLの変化)"
-          hint="選んだスライダー1つだけを刻みながら、入力の次トークン予測が通常時からどれだけ変わるかを測る(他のスライダーは今の値のまま)">
+        <Section title={t("倍率スイープ(倍率ごとのKLの変化)", "Scale sweep (KL at each scale)")}
+          hint={t("選んだスライダー1つだけを刻みながら、入力の次トークン予測が通常時からどれだけ変わるかを測る(他のスライダーは今の値のまま)", "Steps one slider through a range and measures how far the next-token prediction moves from normal (other sliders stay as they are)")}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <select value={sweepTargetKey} onChange={(e) => setSweepTargetKey(e.target.value)}
               style={{ ...buttonStyle, background: "var(--bg-app)", maxWidth: 280 }}>
-              <option value="">対象を選択(先にスライダーを追加)</option>
+              <option value="">{t("対象を選択(先にスライダーを追加)", "Select a target (add a slider first)")}</option>
               {sweepTargets.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
             </select>
-            <label style={labelStyle}>開始
+            <label style={labelStyle}>{t("開始", "Start")}
               <input type="number" step={0.5} value={sweepRange.start}
                 onChange={(e) => setSweepRange((r) => ({ ...r, start: Number(e.target.value) }))}
                 style={{ ...numberStyle, width: 56 }} />
             </label>
-            <label style={labelStyle}>終了
+            <label style={labelStyle}>{t("終了", "Stop")}
               <input type="number" step={0.5} value={sweepRange.stop}
                 onChange={(e) => setSweepRange((r) => ({ ...r, stop: Number(e.target.value) }))}
                 style={{ ...numberStyle, width: 56 }} />
             </label>
-            <label style={labelStyle}>点数
+            <label style={labelStyle}>{t("点数", "Steps")}
               <input type="number" min={2} max={41} value={sweepRange.steps}
                 onChange={(e) => setSweepRange((r) => ({ ...r, steps: Number(e.target.value) }))}
                 style={{ ...numberStyle, width: 50 }} />
             </label>
             <button style={buttonStyle} onClick={runSweep} disabled={!ready || !sweepTargetKey || sweepBusy || generating}>
-              {sweepBusy ? "計測中..." : "スイープ"}
+              {sweepBusy ? t("計測中...", "Measuring...") : t("スイープ", "Sweep")}
             </button>
           </div>
           {sweep && (
             <>
               <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>
-                {sweepTargets.find((t) => t.key === sweep.key)?.label ?? sweep.key} の倍率ごとのKL(入力「{inputText}」の次トークン、
-                通常時の最有力: {JSON.stringify(sweep.baselineTop)})
+                {sweepTargets.find((s) => s.key === sweep.key)?.label ?? sweep.key}{" "}
+                {t(`の倍率ごとのKL(入力「${inputText}」の次トークン、通常時の最有力: ${JSON.stringify(sweep.baselineTop)})`,
+                  `: KL at each scale (next token after "${inputText}", normal top token: ${JSON.stringify(sweep.baselineTop)})`)}
               </div>
-              <SweepChart points={sweep.points} currentScale={currentSweep ? currentSweep.current : null} xLabel="倍率" />
+              <SweepChart points={sweep.points} currentScale={currentSweep ? currentSweep.current : null} xLabel={t("倍率", "scale")} />
               <details>
-                <summary style={{ fontSize: 11, color: "var(--text-secondary)", cursor: "pointer" }}>表で見る</summary>
+                <summary style={{ fontSize: 11, color: "var(--text-secondary)", cursor: "pointer" }}>{t("表で見る", "Show table")}</summary>
                 <table style={{ fontSize: 11, borderCollapse: "collapse", marginTop: 6 }}>
                   <thead>
-                    <tr>{["倍率", "KL", "最有力トークン", "その確率", "通常時の最有力の確率"].map((h) => (
+                    <tr>{[t("倍率", "Scale"), "KL", t("最有力トークン", "Top token"), t("その確率", "Its prob."), t("通常時の最有力の確率", "Normal top prob.")].map((h) => (
                       <th key={h} style={thStyle}>{h}</th>))}</tr>
                   </thead>
                   <tbody>
@@ -550,10 +553,10 @@ function segmentIndexes(pieces: TokenPiece[]): number[] {
   });
 }
 
-const REASON_LABEL: Record<string, string> = {
-  max_new_tokens: "トークン数の上限",
-  end_of_turn: "発話終了",
-  stopped: "停止ボタン",
+const REASON_LABEL: Record<string, [string, string]> = {
+  max_new_tokens: ["トークン数の上限", "Token limit"],
+  end_of_turn: ["発話終了", "End of turn"],
+  stopped: ["停止ボタン", "Stopped"],
 };
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
@@ -580,6 +583,7 @@ function SliderRow({ label, value, range, onChange, onRemove }: {
   onChange: (v: number) => void;
   onRemove?: () => void;
 }) {
+  const { t } = useLang();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -589,7 +593,7 @@ function SliderRow({ label, value, range, onChange, onRemove }: {
           onChange={(e) => { const v = Number(e.target.value); if (Number.isFinite(v)) onChange(Math.max(-10, Math.min(10, v))); }}
           style={{ ...numberStyle, width: 64 }} />
         {onRemove && (
-          <button onClick={onRemove} title="外す" style={{ ...buttonStyle, padding: "2px 8px" }}>×</button>
+          <button onClick={onRemove} title={t("外す", "Remove")} style={{ ...buttonStyle, padding: "2px 8px" }}>×</button>
         )}
       </div>
       <input type="range" min={range.min} max={range.max} step={range.step} value={value}

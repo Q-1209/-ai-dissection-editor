@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -44,6 +44,10 @@ import {
   SYCOPHANCY_NEGATIVE_PROMPTS,
   REFUSAL_POSITIVE_PROMPTS,
   REFUSAL_NEGATIVE_PROMPTS,
+  SYCOPHANCY_POSITIVE_PROMPTS_EN,
+  SYCOPHANCY_NEGATIVE_PROMPTS_EN,
+  REFUSAL_POSITIVE_PROMPTS_EN,
+  REFUSAL_NEGATIVE_PROMPTS_EN,
 } from "./app/presets";
 import type {
   LoadState,
@@ -59,6 +63,7 @@ import type {
   BattleModelEntry,
 } from "./app/types";
 import { formatParamCount, shortenBlockId } from "./app/format";
+import { useLang } from "./app/i18n";
 import { buttonStyle, tabButtonStyle, tabButtonActiveStyle, infoPanelStyle, emptyStateStyle } from "./app/styles";
 
 // 2026-09-22: App.tsx分割の第1段階。プリセット(src/app/presets.ts、実体はpython/presets/
@@ -71,6 +76,7 @@ const nodeTypes: NodeTypes = {
 };
 
 export default function App() {
+  const { t, lang, setLang } = useLang();
   const [tab, setTab] = useState<Tab>("dissect");
   const [rawResult, setRawResult] = useState<ModelInspectResult | null>(null);
   const [loadState, setLoadState] = useState<LoadState>({ status: "idle" });
@@ -90,7 +96,7 @@ export default function App() {
   // 実行タブでAttention/MLPに展開済みのLayer番号。展開操作をすると、そのグラフは
   // 再生成される(繋ぎ替えていたエッジはリセットされる、という割り切り)。
   const [expandedExecLayers, setExpandedExecLayers] = useState<Set<number>>(new Set());
-  const [inputText, setInputText] = useState("こんにちは");
+  const [inputText, setInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   // 2026-09-22追加(全タブ共通、漣さんとの確認事項): 入力文をモデルのチャットテンプレート
   // (tokenizer_config.jsonのchat_template)で包んでから実行するかどうか。Instructモデルは
   // テンプレート無しだと「応答」ではなく「文章の続き書き」モードで動くため(Sycophancy Reducer
@@ -108,14 +114,14 @@ export default function App() {
   const [observeSubTab, setObserveSubTab] = useState<
     "internals" | "sensitivity" | "journey" | "battle" | "neuronSearch" | "ablation" | "steering" | "live"
   >("internals");
-  const [observeInputText, setObserveInputText] = useState("こんにちは");
+  const [observeInputText, setObserveInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [aggregateHeads, setAggregateHeads] = useState(true);
   const [internalsRunState, setInternalsRunState] = useState<InternalsRunState>({ status: "idle" });
   const [selectedAttentionNodeId, setSelectedAttentionNodeId] = useState<string | null>(null);
   const [activationScale, setActivationScale] = useState<"linear" | "log">("linear");
 
   // --- Prompt Sensitivity Map(Phase2)の状態 ---
-  const [sensitivityInputText, setSensitivityInputText] = useState("こんにちは、元気ですか？");
+  const [sensitivityInputText, setSensitivityInputText] = useState(() => (lang === "en" ? "Hello, how are you?" : "こんにちは、元気ですか？"));
   const [replacementMode, setReplacementMode] = useState<ReplacementMode>("pad");
   const [customTokenId, setCustomTokenId] = useState<number | "">("");
   const [sensitivityRunState, setSensitivityRunState] = useState<SensitivityRunState>({
@@ -123,7 +129,7 @@ export default function App() {
   });
 
   // --- Token Journey(Phase2)の状態 ---
-  const [journeyInputText, setJourneyInputText] = useState("こんにちは");
+  const [journeyInputText, setJourneyInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [journeyRunState, setJourneyRunState] = useState<TokenJourneyRunState>({ status: "idle" });
 
   // --- Multi-Model Battle View(Phase2)の状態 ---
@@ -131,7 +137,7 @@ export default function App() {
   // (Battle Viewでは異なるアーキテクチャのモデル同士も比較対象になりうるため)。
   const [battleModels, setBattleModels] = useState<BattleModelEntry[]>([]);
   const [battleAddingModel, setBattleAddingModel] = useState(false);
-  const [battleInputText, setBattleInputText] = useState("こんにちは");
+  const [battleInputText, setBattleInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [battleCompareGeneration, setBattleCompareGeneration] = useState(true);
   const [battleCompareInternals, setBattleCompareInternals] = useState(true);
   const [battleMaxNewTokens, setBattleMaxNewTokens] = useState(20);
@@ -142,7 +148,7 @@ export default function App() {
   // 複数入力への反応比較)の両方に対応する。既存の観察タブと同様、実行タブで
   // 組んだ現在のグラフ構造(execEdges/executionNodeDefs)をそのまま使う。
   const [neuronSearchMode, setNeuronSearchMode] = useState<"rank" | "probe">("rank");
-  const [neuronSearchInputText, setNeuronSearchInputText] = useState("こんにちは");
+  const [neuronSearchInputText, setNeuronSearchInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [neuronKind, setNeuronKind] = useState<NeuronKind>("both");
   const [neuronTargetLayersText, setNeuronTargetLayersText] = useState(""); // 空=全層
   const [neuronTopK, setNeuronTopK] = useState(20);
@@ -154,13 +160,13 @@ export default function App() {
   const [probeLayerIndex, setProbeLayerIndex] = useState(0);
   const [probeKind, setProbeKind] = useState<"mlp" | "attention_head">("mlp");
   const [probeNeuronIndex, setProbeNeuronIndex] = useState(0);
-  const [probeInputTextsRaw, setProbeInputTextsRaw] = useState("こんにちは\nさようなら");
+  const [probeInputTextsRaw, setProbeInputTextsRaw] = useState(() => (lang === "en" ? "Hello\nGoodbye" : "こんにちは\nさようなら"));
 
   // --- Layer Ablation Wizard(Phase2)の状態 ---
   // 2026-09-12確認事項: 「無効化」=出力をゼロに(残差も断つ)。全層自動バッチ処理
   // ではなく、ユーザーがGUI上で選んだノード(1つ以上)を無効化した状態と通常時とを
   // 1回の実行で比較する対話的ツール(具体的なUXは「おすすめで」と一任された部分)。
-  const [ablationInputText, setAblationInputText] = useState("こんにちは");
+  const [ablationInputText, setAblationInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [ablationSelectedNodeIds, setAblationSelectedNodeIds] = useState<Set<string>>(new Set());
   const [ablationCompareGeneration, setAblationCompareGeneration] = useState(true);
   const [ablationMaxNewTokens, setAblationMaxNewTokens] = useState(20);
@@ -172,15 +178,27 @@ export default function App() {
   // ユーザーが選んだノード(Layer Ablation Wizardと同じチェックボックス選択、
   // attention_block/mlp_block/layer_blockに限る。ablatableNodesを再利用する)。
   // 効果の確認はKLダイバージェンス(定量指標)+生成テキストの変化(目視)の両方。
-  const [steeringPositivePromptsRaw, setSteeringPositivePromptsRaw] = useState(
-    "ありがとう、助かりました\nとても嬉しいです"
+  const [steeringPositivePromptsRaw, setSteeringPositivePromptsRaw] = useState(() =>
+    lang === "en" ? "Thank you, that really helped\nI'm so happy" : "ありがとう、助かりました\nとても嬉しいです"
   );
-  const [steeringNegativePromptsRaw, setSteeringNegativePromptsRaw] = useState(
-    "最悪だ\nもう嫌になった"
-  );
+  const [steeringNegativePromptsRaw, setSteeringNegativePromptsRaw] = useState(() => (lang === "en" ? "This is the worst\nI'm so fed up" : "最悪だ\nもう嫌になった"));
   const [steeringTargetNodeIds, setSteeringTargetNodeIds] = useState<Set<string>>(new Set());
   const [steeringScale, setSteeringScale] = useState(4.0);
-  const [steeringInputText, setSteeringInputText] = useState("こんにちは");
+  const [steeringInputText, setSteeringInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
+
+  // 言語を切り替えたとき、入力欄が初期値のまま(書き換えていない)なら、新しい言語の初期値に差し替える
+  useEffect(() => {
+    const swap = (setter: (f: (v: string) => string) => void, ja: string, en: string) =>
+      setter((v) => (lang === "en" && v === ja ? en : lang === "ja" && v === en ? ja : v));
+    for (const setter of [setInputText, setObserveInputText, setJourneyInputText, setBattleInputText,
+      setNeuronSearchInputText, setAblationInputText, setSteeringInputText]) {
+      swap(setter, "こんにちは", "Hello");
+    }
+    swap(setSensitivityInputText, "こんにちは、元気ですか？", "Hello, how are you?");
+    swap(setProbeInputTextsRaw, "こんにちは\nさようなら", "Hello\nGoodbye");
+    swap(setSteeringPositivePromptsRaw, "ありがとう、助かりました\nとても嬉しいです", "Thank you, that really helped\nI'm so happy");
+    swap(setSteeringNegativePromptsRaw, "最悪だ\nもう嫌になった", "This is the worst\nI'm so fed up");
+  }, [lang]);
   const [steeringCompareGeneration, setSteeringCompareGeneration] = useState(true);
   const [steeringMaxNewTokens, setSteeringMaxNewTokens] = useState(20);
   const [steeringRunState, setSteeringRunState] = useState<ActivationSteeringRunState>({
@@ -366,18 +384,23 @@ export default function App() {
     }
     const mergeModeById = new Map(executionNodeDefs.map((n) => [n.id, n.merge_mode ?? "add"]));
 
-    return execNodes.map((n) => {
+    return execNodes.map((raw) => {
+      // 折りたたみ層のラベル(toExecutionGraph.tsで日本語で作られる)を表示言語に合わせる
+      const n =
+        lang === "en" && typeof raw.data.label === "string" && raw.data.label.includes("（クリックで展開）")
+          ? { ...raw, data: { ...raw.data, label: raw.data.label.replace("（クリックで展開）", " (click to expand)") } }
+          : raw;
       const incoming = incomingCountByTarget.get(n.id) ?? 0;
       if (incoming < 2) return n;
       const mode = mergeModeById.get(n.id) ?? "add";
       const baseLabel = typeof n.data.label === "string" ? n.data.label : "";
       // 既に付与済みの合流バッジを剥がしてから付け直す(重複防止)
-      const cleanLabel = baseLabel.replace(/\s*\[合流:(add|average)\]$/, "");
+      const cleanLabel = baseLabel.replace(/\s*\[(合流|merge):(add|average)\]$/, "");
       return {
         ...n,
         data: {
           ...n.data,
-          label: `${cleanLabel} [合流:${mode}]`,
+          label: `${cleanLabel} [${t("合流", "merge")}:${mode}]`,
         },
         style: {
           ...(n.style as Record<string, unknown>),
@@ -385,7 +408,7 @@ export default function App() {
         },
       };
     });
-  }, [execNodes, execEdges, executionNodeDefs]);
+  }, [execNodes, execEdges, executionNodeDefs, lang, t]);
 
   const handleRunExecution = useCallback(async () => {
     if (!rawResult || loadState.status !== "loaded") return;
@@ -546,7 +569,7 @@ export default function App() {
         { modelDir: dir, label: `${result.model_type} (${dir.split(/[\\/]/).pop()})`, config: result.raw_config },
       ]);
     } catch (err) {
-      alert(`モデルの読み込みに失敗しました: ${err instanceof Error ? err.message : String(err)}`);
+      alert(`${t("モデルの読み込みに失敗しました", "Failed to load the model")}: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setBattleAddingModel(false);
     }
@@ -847,11 +870,12 @@ export default function App() {
   // positive=迎合的例文/negative=中立的例文という向きで差分ベクトルを計算するため、
   // 「迎合を減らす」には逆方向(負のscale)で適用する必要がある(2026-09-15確認事項)。
   const applySycophancyReducerPreset = useCallback(() => {
-    setSteeringPositivePromptsRaw(SYCOPHANCY_POSITIVE_PROMPTS.join("\n"));
-    setSteeringNegativePromptsRaw(SYCOPHANCY_NEGATIVE_PROMPTS.join("\n"));
+    const en = lang === "en";
+    setSteeringPositivePromptsRaw((en ? SYCOPHANCY_POSITIVE_PROMPTS_EN : SYCOPHANCY_POSITIVE_PROMPTS).join("\n"));
+    setSteeringNegativePromptsRaw((en ? SYCOPHANCY_NEGATIVE_PROMPTS_EN : SYCOPHANCY_NEGATIVE_PROMPTS).join("\n"));
     setSteeringScale(-2);
     setSteeringMeasureSycophancy(true);
-  }, []);
+  }, [lang]);
 
   // Refusal Behavior Tuner(2026-09-22追加): プリセットボタン1つで対照プロンプト欄・介入方式・
   // 拒否定型句カウント計測フラグ・チャットテンプレート適用をまとめて設定する(漣さんとの確認事項:
@@ -860,14 +884,15 @@ export default function App() {
   //   拒否を増やしたい場合は「加算」に切り替えてscaleを正の値(まず1程度)にする
   // - 拒否は「応答」モードでしか出ないため、チャットテンプレート適用もオンにする
   const applyRefusalTunerPreset = useCallback(() => {
-    setSteeringPositivePromptsRaw(REFUSAL_POSITIVE_PROMPTS.join("\n"));
-    setSteeringNegativePromptsRaw(REFUSAL_NEGATIVE_PROMPTS.join("\n"));
+    const positives = lang === "en" ? REFUSAL_POSITIVE_PROMPTS_EN : REFUSAL_POSITIVE_PROMPTS;
+    setSteeringPositivePromptsRaw(positives.join("\n"));
+    setSteeringNegativePromptsRaw((lang === "en" ? REFUSAL_NEGATIVE_PROMPTS_EN : REFUSAL_NEGATIVE_PROMPTS).join("\n"));
     setSteeringInterventionMode("ablate_direction");
     setSteeringScale(1);
     setSteeringMeasureRefusal(true);
-    setSteeringInputText(REFUSAL_POSITIVE_PROMPTS[0]);
+    setSteeringInputText(positives[0]);
     setUseChatTemplate(true);
-  }, []);
+  }, [lang]);
 
   const totalLayers = rawResult?.num_layers ?? 0;
   const layerToggleLabel = useMemo(() => {
@@ -875,8 +900,8 @@ export default function App() {
     const layerLevelExpanded = Array.from(expandedGroups).filter(
       (k) => k.startsWith("layer-") && !k.includes("-attention") && !k.includes("-mlp")
     ).length;
-    return `展開中 ${layerLevelExpanded} / ${totalLayers} 層`;
-  }, [expandedGroups, totalLayers]);
+    return t(`展開中 ${layerLevelExpanded} / ${totalLayers} 層`, `${layerLevelExpanded} / ${totalLayers} layers expanded`);
+  }, [expandedGroups, totalLayers, t]);
 
   const totalParams = useMemo(() => {
     if (!rawResult) return null;
@@ -934,10 +959,10 @@ export default function App() {
           borderBottom: "1px solid var(--border-default)",
         }}
       >
-        <strong style={{ fontSize: 14, letterSpacing: 0.2 }}>解剖ビューア</strong>
+        <strong style={{ fontSize: 14, letterSpacing: 0.2 }}>{t("解剖ビューア", "AI Dissection Editor")}</strong>
 
         <button onClick={handleSelectModel} style={buttonStyle}>
-          モデルフォルダを開く
+          {t("モデルフォルダを開く", "Open model folder")}
         </button>
 
         {loadState.status === "loaded" && (
@@ -946,19 +971,19 @@ export default function App() {
               onClick={() => setTab("dissect")}
               style={tab === "dissect" ? tabButtonActiveStyle : tabButtonStyle}
             >
-              解剖
+              {t("解剖", "Dissect")}
             </button>
             <button
               onClick={() => setTab("execute")}
               style={tab === "execute" ? tabButtonActiveStyle : tabButtonStyle}
             >
-              実行
+              {t("実行", "Run")}
             </button>
             <button
               onClick={() => setTab("observe")}
               style={tab === "observe" ? tabButtonActiveStyle : tabButtonStyle}
             >
-              観察
+              {t("観察", "Observe")}
             </button>
           </div>
         )}
@@ -974,14 +999,14 @@ export default function App() {
               cursor: "pointer",
               whiteSpace: "nowrap",
             }}
-            title="入力文をモデルのチャットテンプレート(tokenizer_config.jsonのchat_template)で包んでから実行する。Instructモデルで「応答」させたい場合にオン。実行・観察の全機能に共通で適用される"
+            title={t("入力文をモデルのチャットテンプレート(tokenizer_config.jsonのchat_template)で包んでから実行する。Instructモデルで「応答」させたい場合にオン。実行・観察の全機能に共通で適用される", "Wrap the input in the model's chat template (chat_template in tokenizer_config.json) before running. Turn on to make an Instruct model reply. Applies to every Run and Observe feature.")}
           >
             <input
               type="checkbox"
               checked={useChatTemplate}
               onChange={(e) => setUseChatTemplate(e.target.checked)}
             />
-            チャットテンプレート適用
+            {t("チャットテンプレート適用", "Use chat template")}
           </label>
         )}
 
@@ -989,10 +1014,10 @@ export default function App() {
           <>
             <div style={{ width: 1, height: 20, background: "var(--border-default)" }} />
             <button onClick={expandAll} style={buttonStyle}>
-              全層展開
+              {t("全層展開", "Expand all")}
             </button>
             <button onClick={collapseAll} style={buttonStyle}>
-              全層折りたたみ
+              {t("全層折りたたみ", "Collapse all")}
             </button>
             <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{layerToggleLabel}</span>
           </>
@@ -1005,7 +1030,7 @@ export default function App() {
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="入力テキスト"
+              placeholder={t("入力テキスト", "Input text")}
               style={{
                 ...buttonStyle,
                 cursor: "text",
@@ -1019,7 +1044,7 @@ export default function App() {
               max={200}
               value={maxNewTokens}
               onChange={(e) => setMaxNewTokens(Math.max(1, Number(e.target.value) || 1))}
-              title="生成するトークン数"
+              title={t("生成するトークン数", "Number of tokens to generate")}
               style={{
                 ...buttonStyle,
                 cursor: "text",
@@ -1032,19 +1057,19 @@ export default function App() {
               disabled={runState.status === "running"}
               style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
             >
-              {runState.status === "running" ? "生成中..." : "実行"}
+              {runState.status === "running" ? t("生成中...", "Generating...") : t("実行", "Run")}
             </button>
             <button onClick={resetExecutionGraph} style={buttonStyle}>
-              オリジナル構造に戻す
+              {t("オリジナル構造に戻す", "Reset to original")}
             </button>
             <button
               onClick={() => setShowSamplingOptions((v) => !v)}
               style={showSamplingOptions ? tabButtonActiveStyle : buttonStyle}
             >
-              生成設定 {showSamplingOptions ? "▲" : "▼"}
+              {t("生成設定", "Sampling")} {showSamplingOptions ? "▲" : "▼"}
             </button>
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-              展開中 {expandedExecLayers.size} / {totalLayers} 層
+              {t(`展開中 ${expandedExecLayers.size} / ${totalLayers} 層`, `${expandedExecLayers.size} / ${totalLayers} layers expanded`)}
             </span>
           </>
         )}
@@ -1057,7 +1082,7 @@ export default function App() {
                 onClick={() => setObserveSubTab("internals")}
                 style={observeSubTab === "internals" ? tabButtonActiveStyle : tabButtonStyle}
               >
-                内部状態
+                {t("内部状態", "Internals")}
               </button>
               <button
                 onClick={() => setObserveSubTab("sensitivity")}
@@ -1098,7 +1123,7 @@ export default function App() {
               <button
                 onClick={() => setObserveSubTab("live")}
                 style={observeSubTab === "live" ? tabButtonActiveStyle : tabButtonStyle}
-                title="スライダーで層・ニューロン・ステアリングの強さを動かし、生成中に反映させる(Phase3、2026-09-24追加)"
+                title={t("スライダーで層・ニューロン・ステアリングの強さを動かし、生成中に反映させる(Phase3、2026-09-24追加)", "Move sliders for layers, neurons and steering strength and see them applied while generating")}
               >
                 Live Slider
               </button>
@@ -1111,7 +1136,7 @@ export default function App() {
                   type="text"
                   value={observeInputText}
                   onChange={(e) => setObserveInputText(e.target.value)}
-                  placeholder="入力テキスト"
+                  placeholder={t("入力テキスト", "Input text")}
                   style={{
                     ...buttonStyle,
                     cursor: "text",
@@ -1124,7 +1149,7 @@ export default function App() {
                   disabled={internalsRunState.status === "running"}
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {internalsRunState.status === "running" ? "解析中..." : "観察"}
+                  {internalsRunState.status === "running" ? t("解析中...", "Analyzing...") : t("観察", "Observe")}
                 </button>
                 <label
                   style={{
@@ -1141,10 +1166,10 @@ export default function App() {
                     checked={aggregateHeads}
                     onChange={(e) => setAggregateHeads(e.target.checked)}
                   />
-                  ヘッド平均で表示
+                  {t("ヘッド平均で表示", "Average heads")}
                 </label>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  「実行」タブで組んだグラフ構造がそのまま使われます
+                  {t("「実行」タブで組んだグラフ構造がそのまま使われます", "Uses the graph you built in the Run tab")}
                 </span>
               </>
             )}
@@ -1155,7 +1180,7 @@ export default function App() {
                   type="text"
                   value={sensitivityInputText}
                   onChange={(e) => setSensitivityInputText(e.target.value)}
-                  placeholder="入力テキスト（2トークン以上）"
+                  placeholder={t("入力テキスト（2トークン以上）", "Input text (2+ tokens)")}
                   style={{
                     ...buttonStyle,
                     cursor: "text",
@@ -1167,12 +1192,12 @@ export default function App() {
                   value={replacementMode}
                   onChange={(e) => setReplacementMode(e.target.value as ReplacementMode)}
                   style={{ ...buttonStyle, cursor: "pointer" }}
-                  title="各トークンをどう変更して影響度を測るか"
+                  title={t("各トークンをどう変更して影響度を測るか", "How each token is changed to measure its influence")}
                 >
-                  <option value="delete">削除</option>
-                  <option value="pad">パディングに置換</option>
-                  <option value="random">ランダムトークンに置換</option>
-                  <option value="custom">指定トークンIDに置換</option>
+                  <option value="delete">{t("削除", "Delete")}</option>
+                  <option value="pad">{t("パディングに置換", "Replace with padding")}</option>
+                  <option value="random">{t("ランダムトークンに置換", "Replace with a random token")}</option>
+                  <option value="custom">{t("指定トークンIDに置換", "Replace with a token ID")}</option>
                 </select>
                 {replacementMode === "custom" && (
                   <input
@@ -1181,7 +1206,7 @@ export default function App() {
                     onChange={(e) =>
                       setCustomTokenId(e.target.value === "" ? "" : Number(e.target.value))
                     }
-                    placeholder="トークンID"
+                    placeholder={t("トークンID", "Token ID")}
                     style={{
                       ...buttonStyle,
                       cursor: "text",
@@ -1198,10 +1223,10 @@ export default function App() {
                   }
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {sensitivityRunState.status === "running" ? "分析中..." : "分析"}
+                  {sensitivityRunState.status === "running" ? t("分析中...", "Analyzing...") : t("分析", "Analyze")}
                 </button>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  各トークンを1つずつ変更し、出力への影響度(KLダイバージェンス)を測定します
+                  {t("各トークンを1つずつ変更し、出力への影響度(KLダイバージェンス)を測定します", "Changes each token in turn and measures its effect on the output (KL divergence)")}
                 </span>
               </>
             )}
@@ -1212,7 +1237,7 @@ export default function App() {
                   type="text"
                   value={journeyInputText}
                   onChange={(e) => setJourneyInputText(e.target.value)}
-                  placeholder="入力テキスト"
+                  placeholder={t("入力テキスト", "Input text")}
                   style={{
                     ...buttonStyle,
                     cursor: "text",
@@ -1225,10 +1250,10 @@ export default function App() {
                   disabled={journeyRunState.status === "running"}
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {journeyRunState.status === "running" ? "追跡中..." : "追跡"}
+                  {journeyRunState.status === "running" ? t("追跡中...", "Tracing...") : t("追跡", "Trace")}
                 </button>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  各トークンが、層を通過するごとに埋め込み空間上でどの単語に近づくかを追跡します
+                  {t("各トークンが、層を通過するごとに埋め込み空間上でどの単語に近づくかを追跡します", "Traces which vocabulary word each token is closest to after every layer")}
                 </span>
               </>
             )}
@@ -1240,13 +1265,13 @@ export default function App() {
                   disabled={battleAddingModel}
                   style={buttonStyle}
                 >
-                  {battleAddingModel ? "読み込み中..." : "+ モデルを追加"}
+                  {battleAddingModel ? t("読み込み中...", "Loading...") : t("+ モデルを追加", "+ Add model")}
                 </button>
                 <input
                   type="text"
                   value={battleInputText}
                   onChange={(e) => setBattleInputText(e.target.value)}
-                  placeholder="入力テキスト"
+                  placeholder={t("入力テキスト", "Input text")}
                   style={{
                     ...buttonStyle,
                     cursor: "text",
@@ -1269,7 +1294,7 @@ export default function App() {
                     checked={battleCompareGeneration}
                     onChange={(e) => setBattleCompareGeneration(e.target.checked)}
                   />
-                  生成結果
+                  {t("生成結果", "Generation")}
                 </label>
                 <label
                   style={{
@@ -1286,7 +1311,7 @@ export default function App() {
                     checked={battleCompareInternals}
                     onChange={(e) => setBattleCompareInternals(e.target.checked)}
                   />
-                  内部状態
+                  {t("内部状態", "Internals")}
                 </label>
                 {battleCompareGeneration && (
                   <input
@@ -1294,7 +1319,7 @@ export default function App() {
                     value={battleMaxNewTokens}
                     onChange={(e) => setBattleMaxNewTokens(Number(e.target.value))}
                     min={1}
-                    title="生成トークン数"
+                    title={t("生成トークン数", "Tokens to generate")}
                     style={{ ...buttonStyle, cursor: "text", width: 60, background: "var(--bg-app)" }}
                   />
                 )}
@@ -1307,10 +1332,10 @@ export default function App() {
                   }
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {battleRunState.status === "running" ? "比較中..." : "比較"}
+                  {battleRunState.status === "running" ? t("比較中...", "Comparing...") : t("比較", "Compare")}
                 </button>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  追加したモデル({battleModels.length}個)それぞれに、同じ入力での生成結果・内部状態を横並びで比較します
+                  {t(`追加したモデル(${battleModels.length}個)それぞれに、同じ入力での生成結果・内部状態を横並びで比較します`, `Runs the same input through each added model (${battleModels.length}) and compares generation and internals side by side`)}
                 </span>
               </>
             )}
@@ -1325,7 +1350,7 @@ export default function App() {
                       padding: "4px 10px",
                     }}
                   >
-                    ランキング
+                    {t("ランキング", "Ranking")}
                   </button>
                   <button
                     onClick={() => setNeuronSearchMode("probe")}
@@ -1343,24 +1368,24 @@ export default function App() {
                       type="text"
                       value={neuronSearchInputText}
                       onChange={(e) => setNeuronSearchInputText(e.target.value)}
-                      placeholder="入力テキスト"
+                      placeholder={t("入力テキスト", "Input text")}
                       style={{ ...buttonStyle, cursor: "text", width: 140, background: "var(--bg-app)" }}
                     />
                     <select
                       value={neuronKind}
                       onChange={(e) => setNeuronKind(e.target.value as NeuronKind)}
                       style={{ ...buttonStyle, cursor: "pointer" }}
-                      title="探索対象のニューロン種類"
+                      title={t("探索対象のニューロン種類", "Neuron types to search")}
                     >
                       <option value="both">MLP+Attention</option>
-                      <option value="mlp">MLPのみ</option>
-                      <option value="attention_head">Attentionヘッドのみ</option>
+                      <option value="mlp">{t("MLPのみ", "MLP only")}</option>
+                      <option value="attention_head">{t("Attentionヘッドのみ", "Attention heads only")}</option>
                     </select>
                     <input
                       type="text"
                       value={neuronTargetLayersText}
                       onChange={(e) => setNeuronTargetLayersText(e.target.value)}
-                      placeholder="対象層(空欄=全層。例: 0,3,7)"
+                      placeholder={t("対象層(空欄=全層。例: 0,3,7)", "Layers (empty = all, e.g. 0,3,7)")}
                       style={{ ...buttonStyle, cursor: "text", width: 160, background: "var(--bg-app)" }}
                     />
                     <input
@@ -1368,7 +1393,7 @@ export default function App() {
                       value={neuronTopK}
                       onChange={(e) => setNeuronTopK(Number(e.target.value))}
                       min={1}
-                      title="上位何件を表示するか"
+                      title={t("上位何件を表示するか", "How many to show")}
                       style={{ ...buttonStyle, cursor: "text", width: 60, background: "var(--bg-app)" }}
                     />
                   </>
@@ -1380,7 +1405,7 @@ export default function App() {
                       value={probeLayerIndex}
                       onChange={(e) => setProbeLayerIndex(Number(e.target.value))}
                       min={0}
-                      title="層番号"
+                      title={t("層番号", "Layer index")}
                       style={{ ...buttonStyle, cursor: "text", width: 60, background: "var(--bg-app)" }}
                     />
                     <select
@@ -1389,20 +1414,20 @@ export default function App() {
                       style={{ ...buttonStyle, cursor: "pointer" }}
                     >
                       <option value="mlp">MLP</option>
-                      <option value="attention_head">Attentionヘッド</option>
+                      <option value="attention_head">{t("Attentionヘッド", "Attention head")}</option>
                     </select>
                     <input
                       type="number"
                       value={probeNeuronIndex}
                       onChange={(e) => setProbeNeuronIndex(Number(e.target.value))}
                       min={0}
-                      title="ニューロン番号"
+                      title={t("ニューロン番号", "Neuron index")}
                       style={{ ...buttonStyle, cursor: "text", width: 80, background: "var(--bg-app)" }}
                     />
                     <textarea
                       value={probeInputTextsRaw}
                       onChange={(e) => setProbeInputTextsRaw(e.target.value)}
-                      placeholder="入力文(1行に1つ)"
+                      placeholder={t("入力文(1行に1つ)", "Inputs (one per line)")}
                       rows={1}
                       style={{
                         ...buttonStyle,
@@ -1419,20 +1444,20 @@ export default function App() {
                   value={neuronAggregation}
                   onChange={(e) => setNeuronAggregation(e.target.value as NeuronAggregation)}
                   style={{ ...buttonStyle, cursor: "pointer" }}
-                  title="トークン位置方向の集約方法"
+                  title={t("トークン位置方向の集約方法", "How to aggregate across token positions")}
                 >
-                  <option value="max_abs">最大絶対値</option>
-                  <option value="mean_abs">平均絶対値</option>
+                  <option value="max_abs">{t("最大絶対値", "Max |value|")}</option>
+                  <option value="mean_abs">{t("平均絶対値", "Mean |value|")}</option>
                 </select>
                 <button
                   onClick={handleRunNeuronSearch}
                   disabled={neuronSearchRunState.status === "running"}
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {neuronSearchRunState.status === "running" ? "検索中..." : "検索"}
+                  {neuronSearchRunState.status === "running" ? t("検索中...", "Searching...") : t("検索", "Search")}
                 </button>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  「実行」タブで組んだグラフ構造がそのまま使われます
+                  {t("「実行」タブで組んだグラフ構造がそのまま使われます", "Uses the graph you built in the Run tab")}
                 </span>
               </>
             )}
@@ -1443,7 +1468,7 @@ export default function App() {
                   type="text"
                   value={ablationInputText}
                   onChange={(e) => setAblationInputText(e.target.value)}
-                  placeholder="入力テキスト"
+                  placeholder={t("入力テキスト", "Input text")}
                   style={{ ...buttonStyle, cursor: "text", width: 160, background: "var(--bg-app)" }}
                 />
                 <label
@@ -1461,7 +1486,7 @@ export default function App() {
                     checked={ablationCompareGeneration}
                     onChange={(e) => setAblationCompareGeneration(e.target.checked)}
                   />
-                  生成テキストも比較
+                  {t("生成テキストも比較", "Also compare generated text")}
                 </label>
                 {ablationCompareGeneration && (
                   <input
@@ -1469,7 +1494,7 @@ export default function App() {
                     value={ablationMaxNewTokens}
                     onChange={(e) => setAblationMaxNewTokens(Number(e.target.value))}
                     min={1}
-                    title="生成トークン数"
+                    title={t("生成トークン数", "Tokens to generate")}
                     style={{ ...buttonStyle, cursor: "text", width: 60, background: "var(--bg-app)" }}
                   />
                 )}
@@ -1478,10 +1503,10 @@ export default function App() {
                   disabled={ablationRunState.status === "running" || ablationSelectedNodeIds.size === 0}
                   style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
                 >
-                  {ablationRunState.status === "running" ? "比較中..." : "無効化して比較"}
+                  {ablationRunState.status === "running" ? t("比較中...", "Comparing...") : t("無効化して比較", "Ablate and compare")}
                 </button>
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  下のリストから無効化したいノードを選んでください({ablationSelectedNodeIds.size}個選択中)
+                  {t(`下のリストから無効化したいノードを選んでください(${ablationSelectedNodeIds.size}個選択中)`, `Pick the nodes to ablate from the list below (${ablationSelectedNodeIds.size} selected)`)}
                 </span>
               </>
             )}
@@ -1520,11 +1545,11 @@ export default function App() {
 
         {loadState.status === "loading" && (
           <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            解析中: {loadState.modelDir}
+            {t("解析中", "Analyzing")}: {loadState.modelDir}
           </span>
         )}
         {loadState.status === "error" && (
-          <span style={{ fontSize: 12, color: "#e08a8a" }}>エラー: {loadState.message}</span>
+          <span style={{ fontSize: 12, color: "#e08a8a" }}>{t("エラー", "Error")}: {loadState.message}</span>
         )}
         {loadState.status === "loaded" && (
           <span
@@ -1543,9 +1568,18 @@ export default function App() {
 
         {tab === "dissect" && selectedCount > 1 && (
           <span style={{ fontSize: 12, color: "var(--accent-text)", marginLeft: "auto" }}>
-            {selectedCount} 個選択中
+            {t(`${selectedCount} 個選択中`, `${selectedCount} selected`)}
           </span>
         )}
+
+        {/* 表示言語の切替(2026-10-13、英語UI)。選択は次回起動時も保持される */}
+        <button
+          onClick={() => setLang(lang === "en" ? "ja" : "en")}
+          style={{ ...tabButtonStyle, marginLeft: loadState.status === "loaded" ? 0 : "auto", fontSize: 11 }}
+          title={t("Switch to English", "日本語に切り替え")}
+        >
+          {lang === "en" ? "日本語" : "English"}
+        </button>
       </header>
 
       {loadState.status === "loaded" && tab === "execute" && showSamplingOptions && (
@@ -1569,7 +1603,7 @@ export default function App() {
               step={0.1}
               value={temperature}
               onChange={(e) => setTemperature(Math.max(0, Number(e.target.value) || 0))}
-              title="0 = 貪欲デコード(常に最大確率のトークン)。値が大きいほどランダム性が増す"
+              title={t("0 = 貪欲デコード(常に最大確率のトークン)。値が大きいほどランダム性が増す", "0 = greedy decoding (always the most likely token). Higher values add randomness.")}
               style={{ ...buttonStyle, cursor: "text", width: 56, background: "var(--bg-app)" }}
             />
           </label>
@@ -1580,8 +1614,8 @@ export default function App() {
               min={0}
               value={topK}
               onChange={(e) => setTopK(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
-              placeholder="無効"
-              title="確率上位k個のトークンだけに絞ってサンプリング。空欄で無効"
+              placeholder={t("無効", "off")}
+              title={t("確率上位k個のトークンだけに絞ってサンプリング。空欄で無効", "Sample only from the k most likely tokens. Empty = off")}
               style={{ ...buttonStyle, cursor: "text", width: 56, background: "var(--bg-app)" }}
             />
           </label>
@@ -1594,13 +1628,13 @@ export default function App() {
               step={0.05}
               value={topP}
               onChange={(e) => setTopP(e.target.value === "" ? "" : Math.min(1, Math.max(0, Number(e.target.value))))}
-              placeholder="無効"
-              title="累積確率がpを超えるまでの上位トークンからサンプリング。空欄で無効"
+              placeholder={t("無効", "off")}
+              title={t("累積確率がpを超えるまでの上位トークンからサンプリング。空欄で無効", "Sample from the top tokens whose cumulative probability reaches p. Empty = off")}
               style={{ ...buttonStyle, cursor: "text", width: 56, background: "var(--bg-app)" }}
             />
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-secondary)" }}>
-            繰り返しペナルティ
+            {t("繰り返しペナルティ", "Repetition penalty")}
             <input
               type="number"
               min={1}
@@ -1608,12 +1642,12 @@ export default function App() {
               step={0.05}
               value={repetitionPenalty}
               onChange={(e) => setRepetitionPenalty(Math.max(1, Number(e.target.value) || 1))}
-              title="1.0で無効。大きいほど既出トークンの繰り返しを抑制する"
+              title={t("1.0で無効。大きいほど既出トークンの繰り返しを抑制する", "1.0 = off. Higher values discourage repeating tokens that already appeared.")}
               style={{ ...buttonStyle, cursor: "text", width: 56, background: "var(--bg-app)" }}
             />
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-secondary)" }}>
-            繰り返し禁止n-gram
+            {t("繰り返し禁止n-gram", "No-repeat n-gram")}
             <input
               type="number"
               min={0}
@@ -1621,15 +1655,15 @@ export default function App() {
               onChange={(e) =>
                 setNoRepeatNgramSize(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))
               }
-              placeholder="無効"
-              title="指定したnトークンの並び(n-gram)が2回出現するのを禁止する。同じ文パターンの繰り返しを強力に抑制。貪欲デコード・サンプリングどちらでも有効。空欄で無効"
+              placeholder={t("無効", "off")}
+              title={t("指定したnトークンの並び(n-gram)が2回出現するのを禁止する。同じ文パターンの繰り返しを強力に抑制。貪欲デコード・サンプリングどちらでも有効。空欄で無効", "Forbid any n-token sequence (n-gram) from appearing twice. Strongly prevents repeated phrases. Works with greedy decoding and sampling. Empty = off")}
               style={{ ...buttonStyle, cursor: "text", width: 56, background: "var(--bg-app)" }}
             />
           </label>
           <span style={{ color: "var(--text-muted)" }}>
             {temperature === 0
-              ? "貪欲デコード中(常に最大確率のトークンを選択)"
-              : "サンプリング中(ランダム性あり)"}
+              ? t("貪欲デコード中(常に最大確率のトークンを選択)", "Greedy decoding (always picks the most likely token)")
+              : t("サンプリング中(ランダム性あり)", "Sampling (random)")}
           </span>
         </div>
       )}
@@ -1690,15 +1724,15 @@ export default function App() {
           >
             {internalsRunState.status === "idle" && (
               <div style={emptyStateStyle}>
-                入力テキストを指定して「観察」を押すと、Attention重みと各層の活性化値が表示されます
+                {t("入力テキストを指定して「観察」を押すと、Attention重みと各層の活性化値が表示されます", "Enter text and press Observe to see attention weights and per-layer activations")}
               </div>
             )}
             {internalsRunState.status === "running" && (
-              <div style={{ color: "var(--text-secondary)" }}>解析中...</div>
+              <div style={{ color: "var(--text-secondary)" }}>{t("解析中...", "Analyzing...")}</div>
             )}
             {internalsRunState.status === "done" && !internalsRunState.result.success && (
               <div style={{ color: "#e08a8a" }}>
-                エラー ({internalsRunState.result.error_type}): {internalsRunState.result.message}
+                {t("エラー", "Error")} ({internalsRunState.result.error_type}): {internalsRunState.result.message}
               </div>
             )}
             {internalsRunState.status === "done" && internalsRunState.result.success && (
@@ -1714,7 +1748,7 @@ export default function App() {
                       alignItems: "center",
                     }}
                   >
-                    <span>Attentionヒートマップ:</span>
+                    <span>{t("Attentionヒートマップ", "Attention heatmap")}:</span>
                     <select
                       value={selectedAttentionNodeId ?? ""}
                       onChange={(e) => setSelectedAttentionNodeId(e.target.value)}
@@ -1759,7 +1793,7 @@ export default function App() {
                     }}
                   >
                     <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                      層ごとの活性化値統計(std=出力の広がり)
+                      {t("層ごとの活性化値統計(std=出力の広がり)", "Activation stats per layer (std = spread of the output)")}
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button
@@ -1770,9 +1804,9 @@ export default function App() {
                           fontSize: 10,
                           ...(activationScale === "linear" ? tabButtonActiveStyle : {}),
                         }}
-                        title="stdの値をそのまま棒の長さに使う"
+                        title={t("stdの値をそのまま棒の長さに使う", "Bar length = std")}
                       >
-                        線形
+                        {t("線形", "Linear")}
                       </button>
                       <button
                         onClick={() => setActivationScale("log")}
@@ -1782,9 +1816,9 @@ export default function App() {
                           fontSize: 10,
                           ...(activationScale === "log" ? tabButtonActiveStyle : {}),
                         }}
-                        title="桁の異なる値も見比べやすい対数スケールで表示する"
+                        title={t("桁の異なる値も見比べやすい対数スケールで表示する", "Log scale, to compare values of different magnitudes")}
                       >
-                        対数
+                        {t("対数", "Log")}
                       </button>
                     </div>
                   </div>
@@ -1819,17 +1853,17 @@ export default function App() {
           >
             {sensitivityRunState.status === "idle" && (
               <div style={emptyStateStyle}>
-                入力テキストと変更方法を指定して「分析」を押すと、各トークンの重要度が表示されます
+                {t("入力テキストと変更方法を指定して「分析」を押すと、各トークンの重要度が表示されます", "Enter text, pick a change method and press Analyze to see how much each token matters")}
               </div>
             )}
             {sensitivityRunState.status === "running" && (
               <div style={{ color: "var(--text-secondary)" }}>
-                分析中...（トークン数ぶんの追加推論が必要なため、時間がかかることがあります）
+                {t("分析中...（トークン数ぶんの追加推論が必要なため、時間がかかることがあります）", "Analyzing... (this runs one extra pass per token, so it can take a while)")}
               </div>
             )}
             {sensitivityRunState.status === "done" && !sensitivityRunState.result.success && (
               <div style={{ color: "#e08a8a" }}>
-                エラー ({sensitivityRunState.result.error_type}): {sensitivityRunState.result.message}
+                {t("エラー", "Error")} ({sensitivityRunState.result.error_type}): {sensitivityRunState.result.message}
               </div>
             )}
             {sensitivityRunState.status === "done" && sensitivityRunState.result.success && (
@@ -1843,7 +1877,7 @@ export default function App() {
                 }}
               >
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 12 }}>
-                  変更方法: {sensitivityRunState.result.replacement_mode}
+                  {t("変更方法", "Change method")}: {sensitivityRunState.result.replacement_mode}
                 </div>
                 <SensitivityHeatmap
                   results={sensitivityRunState.result.results}
@@ -1868,15 +1902,15 @@ export default function App() {
           >
             {journeyRunState.status === "idle" && (
               <div style={emptyStateStyle}>
-                入力テキストを指定して「追跡」を押すと、各トークンが層ごとにどの単語へ近づくかが表示されます
+                {t("入力テキストを指定して「追跡」を押すと、各トークンが層ごとにどの単語へ近づくかが表示されます", "Enter text and press Trace to see which word each token moves toward at every layer")}
               </div>
             )}
             {journeyRunState.status === "running" && (
-              <div style={{ color: "var(--text-secondary)" }}>追跡中...</div>
+              <div style={{ color: "var(--text-secondary)" }}>{t("追跡中...", "Tracing...")}</div>
             )}
             {journeyRunState.status === "done" && !journeyRunState.result.success && (
               <div style={{ color: "#e08a8a" }}>
-                エラー ({journeyRunState.result.error_type}): {journeyRunState.result.message}
+                {t("エラー", "Error")} ({journeyRunState.result.error_type}): {journeyRunState.result.message}
               </div>
             )}
             {journeyRunState.status === "done" && journeyRunState.result.success && (
@@ -1889,8 +1923,10 @@ export default function App() {
                 }}
               >
                 <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 12 }}>
-                  セルの色が濃いほど、そのトークン位置とブロック出力のコサイン類似度が高いことを示す。
-                  各セルは、そのブロックを通過した時点で埋め込み空間上最も近い単語(top-1)。
+                  {t(
+                    "セルの色が濃いほど、そのトークン位置とブロック出力のコサイン類似度が高いことを示す。各セルは、そのブロックを通過した時点で埋め込み空間上最も近い単語(top-1)。",
+                    "Darker cells mean higher cosine similarity between the block output and the word. Each cell is the closest vocabulary word (top-1) after that block."
+                  )}
                 </div>
                 <TokenJourneyView
                   blockOrder={journeyRunState.result.block_order}
@@ -1917,12 +1953,14 @@ export default function App() {
           >
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>
-                比較対象モデル({battleModels.length}個) — 各モデルは自分自身の構造(層数・hidden_size)
-                通りのデフォルトグラフで実行されます(「実行」タブで組んだグラフとは独立)
+                {t(
+                  `比較対象モデル(${battleModels.length}個) — 各モデルは自分自身の構造(層数・hidden_size)通りのデフォルトグラフで実行されます(「実行」タブで組んだグラフとは独立)`,
+                  `Models to compare (${battleModels.length}). Each runs its own default graph (its own layers and hidden_size), independent of the graph in the Run tab.`
+                )}
               </div>
               {battleModels.length === 0 ? (
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  「+ モデルを追加」から比較したいモデルを2個以上選んでください(1個でも動作します)
+                  {t("「+ モデルを追加」から比較したいモデルを2個以上選んでください(1個でも動作します)", "Use “+ Add model” to pick two or more models to compare (one also works)")}
                 </div>
               ) : (
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1943,7 +1981,7 @@ export default function App() {
                       <span>{m.label}</span>
                       <button
                         onClick={() => handleRemoveBattleModel(m.modelDir)}
-                        title="この モデルを比較対象から外す"
+                        title={t("この モデルを比較対象から外す", "Remove this model from the comparison")}
                         style={{
                           ...buttonStyle,
                           padding: "1px 6px",
@@ -1961,17 +1999,17 @@ export default function App() {
 
             {battleRunState.status === "idle" && (
               <div style={emptyStateStyle}>
-                モデルを追加し、入力テキストを指定して「比較」を押すと、生成結果・内部状態が横並びで表示されます
+                {t("モデルを追加し、入力テキストを指定して「比較」を押すと、生成結果・内部状態が横並びで表示されます", "Add models, enter text and press Compare to see generation and internals side by side")}
               </div>
             )}
             {battleRunState.status === "running" && (
               <div style={{ color: "var(--text-secondary)" }}>
-                比較中...（複数モデルを同時にロードするため、時間がかかることがあります）
+                {t("比較中...（複数モデルを同時にロードするため、時間がかかることがあります）", "Comparing... (loading several models at once can take a while)")}
               </div>
             )}
             {battleRunState.status === "done" && !battleRunState.result.success && (
               <div style={{ color: "#e08a8a" }}>
-                エラー ({battleRunState.result.error_type}): {battleRunState.result.message}
+                {t("エラー", "Error")} ({battleRunState.result.error_type}): {battleRunState.result.message}
               </div>
             )}
             {battleRunState.status === "done" && battleRunState.result.success && (
@@ -1992,12 +2030,12 @@ export default function App() {
             {neuronSearchRunState.status === "idle" && (
               <div style={emptyStateStyle}>
                 {neuronSearchMode === "rank"
-                  ? "入力テキストを指定して「検索」を押すと、強く反応したニューロンがランキング表示されます"
-                  : "層・種類・ニューロン番号・入力文を指定して「検索」を押すと、各入力への反応が表示されます"}
+                  ? t("入力テキストを指定して「検索」を押すと、強く反応したニューロンがランキング表示されます", "Enter text and press Search to rank the neurons that respond most strongly")
+                  : t("層・種類・ニューロン番号・入力文を指定して「検索」を押すと、各入力への反応が表示されます", "Pick a layer, type and neuron index, enter inputs and press Search to see how it responds to each")}
               </div>
             )}
             {neuronSearchRunState.status === "running" && (
-              <div style={{ color: "var(--text-secondary)" }}>検索中...</div>
+              <div style={{ color: "var(--text-secondary)" }}>{t("検索中...", "Searching...")}</div>
             )}
             {neuronSearchRunState.status === "done" && (
               <NeuronSearchView
@@ -2021,11 +2059,11 @@ export default function App() {
           >
             <div style={{ flex: "0 0 260px" }}>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-                無効化するノードを選択(「実行」タブで組んだ現在のグラフ構造から選べます)
+                {t("無効化するノードを選択(「実行」タブで組んだ現在のグラフ構造から選べます)", "Pick nodes to ablate (from the graph you built in the Run tab)")}
               </div>
               {ablatableNodes.length === 0 ? (
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  無効化可能なノードがありません(モデルを読み込んでください)
+                  {t("無効化可能なノードがありません(モデルを読み込んでください)", "No nodes to ablate (load a model first)")}
                 </div>
               ) : (
                 <div
@@ -2068,11 +2106,11 @@ export default function App() {
             <div style={{ flex: "1 1 auto", minWidth: 280 }}>
               {ablationRunState.status === "idle" && (
                 <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                  ノードを選び、入力テキストを指定して「無効化して比較」を押すと、通常時との違いが表示されます
+                  {t("ノードを選び、入力テキストを指定して「無効化して比較」を押すと、通常時との違いが表示されます", "Pick nodes, enter text and press “Ablate and compare” to see the difference from the normal run")}
                 </div>
               )}
               {ablationRunState.status === "running" && (
-                <div style={{ color: "var(--text-secondary)" }}>比較中...</div>
+                <div style={{ color: "var(--text-secondary)" }}>{t("比較中...", "Comparing...")}</div>
               )}
               {ablationRunState.status === "done" && (
                 <LayerAblationView result={ablationRunState.result} />
@@ -2108,11 +2146,11 @@ export default function App() {
           >
             <div style={{ flex: "0 0 260px" }}>
               <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-                ステアリングを適用するノードを選択(「実行」タブで組んだ現在のグラフ構造から選べます)
+                {t("ステアリングを適用するノードを選択(「実行」タブで組んだ現在のグラフ構造から選べます)", "Pick nodes to steer (from the graph you built in the Run tab)")}
               </div>
               {ablatableNodes.length === 0 ? (
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  適用可能なノードがありません(モデルを読み込んでください)
+                  {t("適用可能なノードがありません(モデルを読み込んでください)", "No nodes available (load a model first)")}
                 </div>
               ) : (
                 <div
@@ -2151,20 +2189,21 @@ export default function App() {
                 </div>
               )}
               <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginTop: 10 }}>
-                positive: {parsedSteeringPositivePrompts.length}件 / negative:{" "}
-                {parsedSteeringNegativePrompts.length}件
+                positive: {parsedSteeringPositivePrompts.length} / negative: {parsedSteeringNegativePrompts.length}
               </div>
             </div>
 
             <div style={{ flex: "1 1 auto", minWidth: 280 }}>
               {steeringRunState.status === "idle" && (
                 <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                  positive/negativeプロンプトと適用先ノードを指定して「ステアリングを計算して比較」を押すと、
-                  通常時との違いが表示されます
+                  {t(
+                    "positive/negativeプロンプトと適用先ノードを指定して「ステアリングを計算して比較」を押すと、通常時との違いが表示されます",
+                    "Enter positive/negative prompts, pick target nodes and press “Compute steering and compare” to see the difference from the normal run"
+                  )}
                 </div>
               )}
               {steeringRunState.status === "running" && (
-                <div style={{ color: "var(--text-secondary)" }}>計算中...</div>
+                <div style={{ color: "var(--text-secondary)" }}>{t("計算中...", "Computing...")}</div>
               )}
               {steeringRunState.status === "done" && (
                 <ActivationSteeringView result={steeringRunState.result} />
@@ -2181,18 +2220,18 @@ export default function App() {
               <>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{selectedData.label}</div>
                 <div style={{ color: "var(--text-secondary)" }}>
-                  {selectedData.nodeCount} ノード ·{" "}
-                  {selectedData.isExpanded ? "展開中" : "折りたたみ中"}
+                  {t(`${selectedData.nodeCount} ノード`, `${selectedData.nodeCount} nodes`)} ·{" "}
+                  {selectedData.isExpanded ? t("展開中", "expanded") : t("折りたたみ中", "collapsed")}
                 </div>
                 <div style={{ color: "var(--text-muted)", marginTop: 6 }}>
-                  クリックで{selectedData.isExpanded ? "折りたたみ" : "展開"}
+                  {selectedData.isExpanded ? t("クリックで折りたたみ", "Click to collapse") : t("クリックで展開", "Click to expand")}
                 </div>
               </>
             ) : (
               <>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>{selectedData.displayName}</div>
                 <div style={{ color: "var(--text-secondary)", marginBottom: 2 }}>
-                  役割: {selectedData.roleLabelJa}
+                  {t("役割", "Role")}: {lang === "en" ? selectedData.role : selectedData.roleLabelJa}
                 </div>
                 {selectedData.shape && (
                   <div style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
@@ -2223,12 +2262,12 @@ export default function App() {
         {tab === "execute" && runState.status !== "idle" && (
           <div style={{ ...infoPanelStyle, width: 340 }}>
             {runState.status === "running" && (
-              <div style={{ color: "var(--text-secondary)" }}>生成中...</div>
+              <div style={{ color: "var(--text-secondary)" }}>{t("生成中...", "Generating...")}</div>
             )}
             {runState.status === "done" && runState.result.success && (
               <>
                 <div style={{ fontWeight: 600, marginBottom: 6, color: "#8fd4a8" }}>
-                  実行成功
+                  {t("実行成功", "Done")}
                 </div>
                 {runState.result.generated_text !== null ? (
                   <div
@@ -2247,7 +2286,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div style={{ color: "var(--text-muted)", fontSize: 10.5, marginBottom: 8 }}>
-                    (tokenizer.jsonが無いためテキスト表示不可。トークンIDのみ表示)
+                    {t("(tokenizer.jsonが無いためテキスト表示不可。トークンIDのみ表示)", "(No tokenizer.json, so only token IDs are shown)")}
                   </div>
                 )}
                 <div
@@ -2272,17 +2311,17 @@ export default function App() {
                   generated: [{runState.result.generated_token_ids.join(", ")}]
                 </div>
                 <div style={{ color: "var(--text-muted)", marginTop: 8, fontSize: 10.5 }}>
-                  実行順序: {runState.result.executed_order.join(" → ")}
+                  {t("実行順序", "Execution order")}: {runState.result.executed_order.join(" → ")}
                 </div>
                 <div style={{ color: "var(--text-muted)", marginTop: 8, fontSize: 10.5 }}>
-                  出力の意味的な妥当性は保証されません(Phase1の設計上の割り切り)。
+                  {t("出力の意味的な妥当性は保証されません(Phase1の設計上の割り切り)。", "The output is not guaranteed to make sense: rewired graphs can break the model.")}
                 </div>
               </>
             )}
             {runState.status === "done" && !runState.result.success && (
               <>
                 <div style={{ fontWeight: 600, marginBottom: 6, color: "#e08a8a" }}>
-                  実行エラー ({runState.result.error_type})
+                  {t("実行エラー", "Run error")} ({runState.result.error_type})
                 </div>
                 <div style={{ color: "var(--text-secondary)", fontSize: 11 }}>
                   {runState.result.message}
@@ -2294,7 +2333,7 @@ export default function App() {
 
         {loadState.status === "idle" && (
           <div style={emptyStateStyle}>
-            「モデルフォルダを開く」からHuggingFace形式のモデルを選択してください
+            {t("「モデルフォルダを開く」からHuggingFace形式のモデルを選択してください", "Click “Open model folder” and pick a Hugging Face model folder (config.json + safetensors)")}
           </div>
         )}
       </div>

@@ -27,6 +27,7 @@ import torch
 
 from .graph_runner import LlamaGraphExecutor
 from .graph_validation import GraphNode, GraphValidationError
+from .i18n import tr
 
 
 def resolve_output_key(internals: dict[str, torch.Tensor], node_id: str) -> str:
@@ -43,8 +44,8 @@ def resolve_output_key(internals: dict[str, torch.Tensor], node_id: str) -> str:
         if key in internals:
             return key
     raise GraphValidationError(
-        f"ノード '{node_id}' の内部出力が見つかりませんでした。"
-        f"target_node_idsに指定したノードがグラフ内に実在するか確認してください。"
+        tr(f"ノード '{node_id}' の内部出力が見つかりませんでした。"
+        f"target_node_idsに指定したノードがグラフ内に実在するか確認してください。", f"No internal output found for node '{node_id}'. " f"Check that the nodes in target_node_ids exist in the graph.")
     )
 
 
@@ -69,11 +70,11 @@ def compute_steering_vectors(
     戻り値: {node_id: ベクトル([hidden_size]、torch.Tensor)}
     """
     if not positive_input_ids:
-        raise GraphValidationError("positive_prompts を1つ以上指定してください。")
+        raise GraphValidationError(tr("positive_prompts を1つ以上指定してください。", "Give at least one positive prompt."))
     if not negative_input_ids:
-        raise GraphValidationError("negative_prompts を1つ以上指定してください。")
+        raise GraphValidationError(tr("negative_prompts を1つ以上指定してください。", "Give at least one negative prompt."))
     if not target_node_ids:
-        raise GraphValidationError("target_node_ids を1つ以上指定してください。")
+        raise GraphValidationError(tr("target_node_ids を1つ以上指定してください。", "Give at least one target node (target_node_ids)."))
 
     def collect(prompt_input_ids: list[torch.Tensor]) -> dict[str, list[torch.Tensor]]:
         collected: dict[str, list[torch.Tensor]] = {nid: [] for nid in target_node_ids}

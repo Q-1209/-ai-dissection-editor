@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { InterventionMode } from "../electron.d";
 import type { ActivationSteeringRunState } from "../app/types";
 import { buttonStyle } from "../app/styles";
+import { useLang } from "../app/i18n";
 
 // 観察タブ→Activation Steeringサブタブのツールバー(2026-09-22、App.tsx分割の第1段階で切り出し)。
 // 状態はApp.tsx側に置いたまま(実行ハンドラ・他タブとの共有があるため)、表示だけをここに分けている。
@@ -36,6 +37,7 @@ export interface SteeringToolbarProps {
 }
 
 export function SteeringToolbar(props: SteeringToolbarProps) {
+  const { t } = useLang();
   const {
     applyRefusalTunerPreset,
     applySycophancyReducerPreset,
@@ -68,30 +70,30 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
         <button
           onClick={applySycophancyReducerPreset}
           style={buttonStyle}
-          title="対照プロンプト・scale・迎合語彙カウントをSycophancy Reducer用に一括設定"
+          title={t("対照プロンプト・scale・迎合語彙カウントをSycophancy Reducer用に一括設定", "Fill in contrastive prompts, scale and the agreeing-phrase count for the Sycophancy Reducer")}
         >
-          Sycophancy Reducerプリセット
+          {t("Sycophancy Reducerプリセット", "Sycophancy preset")}
         </button>
         <button
           onClick={applyRefusalTunerPreset}
           style={buttonStyle}
-          title="対照プロンプト・介入方式(方向除去)・拒否定型句カウント・チャットテンプレート適用をRefusal Behavior Tuner用に一括設定"
+          title={t("対照プロンプト・介入方式(方向除去)・拒否定型句カウント・チャットテンプレート適用をRefusal Behavior Tuner用に一括設定", "Fill in contrastive prompts, directional ablation, the refusal-phrase count and the chat template for the Refusal Tuner")}
         >
-          Refusal Tunerプリセット
+          {t("Refusal Tunerプリセット", "Refusal preset")}
         </button>
         <select
           value={steeringInterventionMode}
           onChange={(e) => setSteeringInterventionMode(e.target.value as InterventionMode)}
-          title="介入方式: 加算=scale倍したベクトルを足す(符号で方向を反転)、方向除去=その方向の成分を射影で取り除く(scaleは使わない)"
+          title={t("介入方式: 加算=scale倍したベクトルを足す(符号で方向を反転)、方向除去=その方向の成分を射影で取り除く(scaleは使わない)", "Intervention: Add = add the vector times scale (negative flips it). Ablate = project out that direction (scale unused).")}
           style={{ ...buttonStyle, background: "var(--bg-app)" }}
         >
-          <option value="add">加算</option>
-          <option value="ablate_direction">方向除去</option>
+          <option value="add">{t("加算", "Add")}</option>
+          <option value="ablate_direction">{t("方向除去", "Ablate direction")}</option>
         </select>
         <textarea
           value={steeringPositivePromptsRaw}
           onChange={(e) => setSteeringPositivePromptsRaw(e.target.value)}
-          placeholder="positiveプロンプト(1行に1つ)"
+          placeholder={t("positiveプロンプト(1行に1つ)", "positive prompts (one per line)")}
           rows={1}
           style={{
             ...buttonStyle,
@@ -105,7 +107,7 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
         <textarea
           value={steeringNegativePromptsRaw}
           onChange={(e) => setSteeringNegativePromptsRaw(e.target.value)}
-          placeholder="negativeプロンプト(1行に1つ)"
+          placeholder={t("negativeプロンプト(1行に1つ)", "negative prompts (one per line)")}
           rows={1}
           style={{
             ...buttonStyle,
@@ -124,8 +126,8 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
           disabled={steeringInterventionMode === "ablate_direction"}
           title={
             steeringInterventionMode === "ablate_direction"
-              ? "方向除去モードではscaleは使いません"
-              : "ステアリングの強さ(符号反転で逆方向)"
+              ? t("方向除去モードではscaleは使いません", "Scale is not used when ablating a direction")
+              : t("ステアリングの強さ(符号反転で逆方向)", "Steering strength (negative = opposite direction)")
           }
           style={{
             ...buttonStyle,
@@ -139,7 +141,7 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
           type="text"
           value={steeringInputText}
           onChange={(e) => setSteeringInputText(e.target.value)}
-          placeholder="入力テキスト"
+          placeholder={t("入力テキスト", "Input text")}
           style={{ ...buttonStyle, cursor: "text", width: 140, background: "var(--bg-app)" }}
         />
         <label
@@ -157,7 +159,7 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
             checked={steeringCompareGeneration}
             onChange={(e) => setSteeringCompareGeneration(e.target.checked)}
           />
-          生成テキストも比較
+          {t("生成テキストも比較", "Also compare generated text")}
         </label>
         {steeringCompareGeneration && (
           <input
@@ -165,7 +167,7 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
             value={steeringMaxNewTokens}
             onChange={(e) => setSteeringMaxNewTokens(Number(e.target.value))}
             min={1}
-            title="生成トークン数"
+            title={t("生成トークン数", "Tokens to generate")}
             style={{ ...buttonStyle, cursor: "text", width: 60, background: "var(--bg-app)" }}
           />
         )}
@@ -178,14 +180,14 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
             color: "var(--text-secondary)",
             cursor: "pointer",
           }}
-          title="生成テキスト中の迎合的定型語彙の出現回数を機械的指標として表示する(Sycophancy Reducer)"
+          title={t("生成テキスト中の迎合的定型語彙の出現回数を機械的指標として表示する(Sycophancy Reducer)", "Count agreeing stock phrases in the generated text as a simple metric (Sycophancy Reducer)")}
         >
           <input
             type="checkbox"
             checked={steeringMeasureSycophancy}
             onChange={(e) => setSteeringMeasureSycophancy(e.target.checked)}
           />
-          迎合語彙カウントも計測
+          {t("迎合語彙カウントも計測", "Count agreeing phrases")}
         </label>
         <label
           style={{
@@ -196,14 +198,14 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
             color: "var(--text-secondary)",
             cursor: "pointer",
           }}
-          title="生成テキスト中の拒否定型句の出現回数を機械的指標として表示する(Refusal Behavior Tuner)"
+          title={t("生成テキスト中の拒否定型句の出現回数を機械的指標として表示する(Refusal Behavior Tuner)", "Count refusal stock phrases in the generated text as a simple metric (Refusal Tuner)")}
         >
           <input
             type="checkbox"
             checked={steeringMeasureRefusal}
             onChange={(e) => setSteeringMeasureRefusal(e.target.checked)}
           />
-          拒否語彙カウントも計測
+          {t("拒否語彙カウントも計測", "Count refusal phrases")}
         </label>
         <button
           onClick={handleRunSteering}
@@ -215,10 +217,10 @@ export function SteeringToolbar(props: SteeringToolbarProps) {
           }
           style={{ ...buttonStyle, background: "var(--accent)", color: "#0f1418", fontWeight: 600 }}
         >
-          {steeringRunState.status === "running" ? "計算中..." : "ステアリングを計算して比較"}
+          {steeringRunState.status === "running" ? t("計算中...", "Computing...") : t("ステアリングを計算して比較", "Compute steering and compare")}
         </button>
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          下のリストから適用先ノードを選んでください({steeringTargetNodeIds.size}個選択中)
+          {t(`下のリストから適用先ノードを選んでください(${steeringTargetNodeIds.size}個選択中)`, `Pick target nodes from the list below (${steeringTargetNodeIds.size} selected)`)}
         </span>
     </>
   );

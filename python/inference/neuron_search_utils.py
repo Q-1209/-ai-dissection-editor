@@ -8,6 +8,7 @@ torch無しでテストできるようにするため、他の*_numpy.pyテス�
 """
 
 from __future__ import annotations
+from .i18n import tr
 
 
 def resolve_target_layers(num_layers: int, target_layers: list[int] | None) -> list[int]:
@@ -19,7 +20,7 @@ def resolve_target_layers(num_layers: int, target_layers: list[int] | None) -> l
         return list(range(num_layers))
     invalid = [i for i in target_layers if i < 0 or i >= num_layers]
     if invalid:
-        raise ValueError(f"存在しない層番号が指定されました: {invalid} (このモデルは{num_layers}層)")
+        raise ValueError(tr(f"存在しない層番号が指定されました: {invalid} (このモデルは{num_layers}層)", f"Layer indices out of range: {invalid} (this model has {num_layers} layers)"))
     return sorted(set(target_layers))
 
 

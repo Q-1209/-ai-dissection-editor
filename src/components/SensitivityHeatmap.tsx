@@ -1,4 +1,5 @@
 import type { SensitivityTokenResult } from "../electron.d";
+import { useLang } from "../app/i18n";
 
 interface SensitivityHeatmapProps {
   results: SensitivityTokenResult[];
@@ -21,6 +22,7 @@ function valueToColor(value: number, maxValue: number): string {
  * 濃い色で強調される。最上位予測トークンが変わった位置には印を付ける。
  */
 export function SensitivityHeatmap({ results, tokenLabels }: SensitivityHeatmapProps) {
+  const { t } = useLang();
   if (results.length === 0) return null;
 
   const maxKl = Math.max(...results.map((r) => r.kl_divergence), 1e-6);
@@ -72,8 +74,10 @@ export function SensitivityHeatmap({ results, tokenLabels }: SensitivityHeatmapP
         })}
       </div>
       <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginTop: 4 }}>
-        色が濃い（オレンジ寄り）ほど、そのトークンを変更したときの出力への影響が大きいことを示す。
-        枠が太い（アクセント色）トークンは、変更により次トークンの最上位予測が変わったことを示す。
+        {t(
+          "色が濃い（オレンジ寄り）ほど、そのトークンを変更したときの出力への影響が大きいことを示す。枠が太い（アクセント色）トークンは、変更により次トークンの最上位予測が変わったことを示す。",
+          "Darker (more orange) tokens change the output more when altered. A thick accent border means altering that token changed the top next-token prediction."
+        )}
       </div>
     </div>
   );

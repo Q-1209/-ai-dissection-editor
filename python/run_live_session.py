@@ -59,6 +59,7 @@ from inference.live_controls import (  # noqa: E402
     validate_command,
 )
 from inference.tokenizer_utils import TokenizerLoadError  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 _out_lock = threading.Lock()
 
@@ -89,7 +90,7 @@ def build_graph(request: dict):
     entry = [n.id for n in nodes if n.role == "embedding"]
     exit_ = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry) != 1 or len(exit_) != 1:
-        raise GraphValidationError("embeddingノードとlm_headノードがそれぞれ1つずつ必要です。")
+        raise GraphValidationError(tr("embeddingノードとlm_headノードがそれぞれ1つずつ必要です。", "Exactly one embedding node and one lm_head node are required."))
     topological_sort(nodes, edges)
     build_input_map_multi(nodes, edges, entry_node_id=entry[0])
     return nodes, edges, entry[0], exit_[0]
@@ -160,7 +161,7 @@ class Server:
                 self._init(msg)
                 return
             if self.session is None:
-                raise ControlError("先に init コマンドでモデルを読み込んでください。")
+                raise ControlError(tr("先に init コマンドでモデルを読み込んでください。", "Load the model with the init command first."))
             if cmd == "set_controls":
                 self._set_controls(msg)
             elif cmd == "set_steering":

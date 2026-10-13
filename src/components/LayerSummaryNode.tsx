@@ -1,5 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import type { CSSProperties } from "react";
+import { useLang } from "../app/i18n";
 
 export interface LayerSummaryNodeData extends Record<string, unknown> {
   kind: "layerSummary";
@@ -14,6 +15,7 @@ export interface LayerSummaryNodeData extends Record<string, unknown> {
 }
 
 export function LayerSummaryNode({ data }: { data: LayerSummaryNodeData }) {
+  const { t } = useLang();
   const style: CSSProperties = {
     background: "var(--role-summary-bg)",
     border: "1px dashed var(--role-summary-border)",
@@ -35,7 +37,9 @@ export function LayerSummaryNode({ data }: { data: LayerSummaryNodeData }) {
         <span style={{ fontSize: 12, fontWeight: 600 }}>{data.label}</span>
       </div>
       <div style={{ fontSize: 10.5, opacity: 0.75, marginTop: 4 }}>
-        {data.isExpanded ? "クリックで折りたたむ" : `クリックで展開 · ${data.nodeCount}ノード`}
+        {data.isExpanded
+          ? t("クリックで折りたたむ", "Click to collapse")
+          : t(`クリックで展開 · ${data.nodeCount}ノード`, `Click to expand · ${data.nodeCount} nodes`)}
       </div>
       <Handle type="source" position={Position.Right} style={handleStyle} />
     </div>

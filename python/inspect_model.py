@@ -25,6 +25,7 @@ import struct
 import sys
 from pathlib import Path
 from typing import Any
+from inference.i18n import tr  # 標準ライブラリのみに依存(os)。構造解析はtorch不要のまま
 
 # Windows環境ではデフォルトの標準出力エンコーディングがCP932(Shift-JIS系)になり、
 # ラベルに含まれる em dash(—)などの記号でUnicodeEncodeErrorが発生する。
@@ -63,8 +64,8 @@ def collect_all_tensor_entries(model_dir: Path) -> dict[str, dict[str, Any]]:
     safetensor_files = sorted(model_dir.glob("*.safetensors"))
     if not safetensor_files:
         raise InspectionError(
-            f"No .safetensors files found in {model_dir}. "
-            "現時点ではsafetensors形式のみ対応しています(.binのpickle形式は未対応)。"
+            tr(f"No .safetensors files found in {model_dir}. "
+            "現時点ではsafetensors形式のみ対応しています(.binのpickle形式は未対応)。", f"No .safetensors files found in {model_dir}. " "Only safetensors is supported for now (.bin pickle files are not).")
         )
 
     all_entries: dict[str, dict[str, Any]] = {}

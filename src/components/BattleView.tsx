@@ -1,5 +1,6 @@
 import type { BattleModelResult } from "../electron.d";
 import { ActivationStatsList } from "./ActivationStatsList";
+import { useLang } from "../app/i18n";
 
 interface BattleViewProps {
   results: BattleModelResult[];
@@ -21,6 +22,7 @@ interface BattleViewProps {
  * 将来的にモデルごとのヒートマップ表示を追加する余地はある)。
  */
 export function BattleView({ results, activationScale }: BattleViewProps) {
+  const { t } = useLang();
   if (results.length === 0) return null;
 
   return (
@@ -55,7 +57,7 @@ export function BattleView({ results, activationScale }: BattleViewProps) {
 
           {!r.success && (
             <div style={{ color: "#e08a8a", fontSize: 12 }}>
-              エラー ({r.error_type}): {r.message}
+              {t("エラー", "Error")} ({r.error_type}): {r.message}
             </div>
           )}
 
@@ -64,7 +66,7 @@ export function BattleView({ results, activationScale }: BattleViewProps) {
               {r.generated_text !== null && (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 4 }}>
-                    生成結果
+                    {t("生成結果", "Generation")}
                   </div>
                   <div
                     style={{
@@ -77,14 +79,14 @@ export function BattleView({ results, activationScale }: BattleViewProps) {
                       wordBreak: "break-word",
                     }}
                   >
-                    {r.generated_text || "(空)"}
+                    {r.generated_text || t("(空)", "(empty)")}
                   </div>
                 </div>
               )}
 
               {r.generated_token_ids !== null && (
                 <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 12 }}>
-                  生成トークン数: {r.generated_token_ids.length} / ブロック数:{" "}
+                  {t("生成トークン数", "Generated tokens")}: {r.generated_token_ids.length} / {t("ブロック数", "Blocks")}:{" "}
                   {r.executed_order.length}
                 </div>
               )}
@@ -92,7 +94,7 @@ export function BattleView({ results, activationScale }: BattleViewProps) {
               {r.activation_stats !== null && (
                 <div>
                   <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 6 }}>
-                    層ごとの活性化値統計(std)
+                    {t("層ごとの活性化値統計(std)", "Activation stats per layer (std)")}
                   </div>
                   <ActivationStatsList
                     stats={r.activation_stats}

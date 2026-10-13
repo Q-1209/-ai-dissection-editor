@@ -33,6 +33,7 @@ from .live_controls import (
 from .sampling import SamplingConfig, sample_next_token
 from .sensitivity import compute_kl_divergence
 from .tokenizer_utils import decode_tokens, encode_text, get_stop_token_ids
+from .i18n import tr
 
 SCALABLE_ROLES = ("attention_block", "mlp_block", "layer_block")
 
@@ -73,7 +74,7 @@ class LiveSession:
     def encode(self, text: str) -> torch.Tensor:
         ids = encode_text(self.tokenizer, text, model_dir=self.model_dir, use_chat_template=self.use_chat_template)
         if not ids:
-            raise GraphValidationError(f"入力テキストのトークナイズ結果が空でした: {text!r}")
+            raise GraphValidationError(tr(f"入力テキストのトークナイズ結果が空でした: {text!r}", f"The input text tokenized to nothing: {text!r}"))
         return torch.tensor([ids])
 
     def set_steering(self, positive_prompts: list[str], negative_prompts: list[str], target_node_ids: list[str]) -> dict:
@@ -82,9 +83,9 @@ class LiveSession:
 
         unknown = set(target_node_ids) - {n.id for n in self.nodes}
         if unknown:
-            raise GraphValidationError(f"ステアリング対象のノードがグラフ内にありません: {sorted(unknown)}")
+            raise GraphValidationError(tr(f"ステアリング対象のノードがグラフ内にありません: {sorted(unknown)}", f"Steering target nodes are not in the graph: {sorted(unknown)}"))
         if not positive_prompts or not negative_prompts or not target_node_ids:
-            raise GraphValidationError("ステアリングには positive/negative のプロンプトと対象ノードが1つ以上必要です。")
+            raise GraphValidationError(tr("ステアリングには positive/negative のプロンプトと対象ノードが1つ以上必要です。", "Steering needs at least one positive prompt, one negative prompt and one target node."))
         self.steering_vectors = compute_steering_vectors(
             self.executor, self.nodes, self.edges, entry_node_id=self.entry, exit_node_id=self.exit,
             positive_input_ids=[self.encode(p) for p in positive_prompts],
@@ -107,7 +108,7 @@ class LiveSession:
             kw["neuron_scales"] = tensors
         if controls.steering_scale != 0.0:
             if self.steering_vectors is None:
-                raise GraphValidationError("ステアリングの強さを0以外にするには、先にステアリングベクトルを計算してください。")
+                raise GraphValidationError(tr("ステアリングの強さを0以外にするには、先にステアリングベクトルを計算してください。", "Compute the steering vector before setting a non-zero steering strength."))
             kw["steering_vectors"] = self.steering_vectors
             kw["steering_scale"] = controls.steering_scale
         return kw

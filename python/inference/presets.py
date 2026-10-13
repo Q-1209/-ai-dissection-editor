@@ -24,6 +24,19 @@ def load_presets() -> dict:
 _PRESETS = load_presets()
 
 
-def preset(name: str) -> dict:
-    """"sycophancy" / "refusal" のプリセット({positive_prompts, negative_prompts, phrases})を返す。"""
-    return _PRESETS[name]
+def preset(name: str, lang: str = "ja") -> dict:
+    """"sycophancy" / "refusal" のプリセット({positive_prompts, negative_prompts, phrases})を返す。
+
+    lang="en" で英語UI用の文例(2026-10-13追加、JSONの "en")を返す。
+    """
+    return _PRESETS["en"][name] if lang == "en" else _PRESETS[name]
+
+
+def phrases(name: str) -> list[str]:
+    """語彙カウント用の定型語彙。画面の言語に関係なく、日本語・英語の両方の語彙を重複なしで返す
+    (英語で質問しても日本語で答えるモデル、その逆もあるため)。"""
+    out: list[str] = []
+    for p in list(_PRESETS[name]["phrases"]) + list(_PRESETS["en"][name]["phrases"]):
+        if p not in out:
+            out.append(p)
+    return out

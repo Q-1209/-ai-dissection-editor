@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from .i18n import tr
 
 SCALE_MIN = -10.0
 SCALE_MAX = 10.0
@@ -82,17 +83,17 @@ def _scale(value, what: str) -> float:
     try:
         s = float(value)
     except (TypeError, ValueError):
-        raise ControlError(f"{what} の倍率が数値ではありません: {value!r}") from None
+        raise ControlError(tr(f"{what} の倍率が数値ではありません: {value!r}", f"Scale for {what} is not a number: {value!r}")) from None
     if not math.isfinite(s):
-        raise ControlError(f"{what} の倍率が有限の数値ではありません: {value!r}")
+        raise ControlError(tr(f"{what} の倍率が有限の数値ではありません: {value!r}", f"Scale for {what} is not a finite number: {value!r}"))
     if not (SCALE_MIN <= s <= SCALE_MAX):
-        raise ControlError(f"{what} の倍率は {SCALE_MIN}〜{SCALE_MAX} の範囲で指定してください(指定値: {s})")
+        raise ControlError(tr(f"{what} の倍率は {SCALE_MIN}〜{SCALE_MAX} の範囲で指定してください(指定値: {s})", f"Scale for {what} must be between {SCALE_MIN} and {SCALE_MAX} (got {s})"))
     return s
 
 
 def _int(value, what: str) -> int:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or int(value) != value:
-        raise ControlError(f"{what} は整数で指定してください(指定値: {value!r})")
+        raise ControlError(tr(f"{what} は整数で指定してください(指定値: {value!r})", f"{what} must be an integer (got {value!r})"))
     return int(value)
 
 
@@ -105,13 +106,13 @@ def normalize_controls(raw: dict | None, limits: ModelLimits) -> Controls:
     """
     raw = raw or {}
     if not isinstance(raw, dict):
-        raise ControlError("controls はオブジェクト(辞書)で指定してください。")
+        raise ControlError(tr("controls はオブジェクト(辞書)で指定してください。", "controls must be an object (dict)."))
 
     node_scales: dict[str, float] = {}
     for node_id, value in (raw.get("node_scales") or {}).items():
         if node_id not in limits.node_ids:
             raise ControlError(
-                f"倍率を掛けられないノードです: {node_id}(attention/MLP/層ブロックのみ。グラフ内に存在する必要があります)"
+                tr(f"倍率を掛けられないノードです: {node_id}(attention/MLP/層ブロックのみ。グラフ内に存在する必要があります)", f"Cannot scale node {node_id} (only attention, MLP and layer blocks that exist in the graph)")
             )
         s = _scale(value, node_id)
         if s != 1.0:
@@ -120,23 +121,23 @@ def normalize_controls(raw: dict | None, limits: ModelLimits) -> Controls:
     neurons: dict[tuple[int, str, int], NeuronControl] = {}
     for item in raw.get("neurons") or []:
         if not isinstance(item, dict):
-            raise ControlError("neurons の各要素はオブジェクトで指定してください。")
+            raise ControlError(tr("neurons の各要素はオブジェクトで指定してください。", "Each item in neurons must be an object."))
         kind = item.get("kind")
         if kind not in NEURON_KINDS:
-            raise ControlError(f"ニューロンの種類は {NEURON_KINDS} のいずれかです(指定値: {kind!r})")
-        layer = _int(item.get("layer"), "層番号")
+            raise ControlError(tr(f"ニューロンの種類は {NEURON_KINDS} のいずれかです(指定値: {kind!r})", f"Neuron kind must be one of {NEURON_KINDS} (got {kind!r})"))
+        layer = _int(item.get("layer"), tr("層番号", "layer index"))
         if not (0 <= layer < limits.num_layers):
-            raise ControlError(f"層番号は 0〜{limits.num_layers - 1} です(指定値: {layer})")
-        index = _int(item.get("index"), "ニューロン番号")
+            raise ControlError(tr(f"層番号は 0〜{limits.num_layers - 1} です(指定値: {layer})", f"Layer index must be 0-{limits.num_layers - 1} (got {layer})"))
+        index = _int(item.get("index"), tr("ニューロン番号", "neuron index"))
         upper = limits.intermediate_size if kind == "mlp" else limits.num_heads
         if not (0 <= index < upper):
-            label = "MLPの次元番号" if kind == "mlp" else "ヘッド番号"
-            raise ControlError(f"{label}は 0〜{upper - 1} です(指定値: {index})")
+            label = tr("MLPの次元番号", "MLP dimension index") if kind == "mlp" else tr("ヘッド番号", "head index")
+            raise ControlError(tr(f"{label}は 0〜{upper - 1} です(指定値: {index})", f"{label} must be 0-{upper - 1} (got {index})"))
         s = _scale(item.get("scale", 1.0), f"L{layer} {kind} #{index}")
         neurons[(layer, kind, index)] = NeuronControl(layer, kind, index, s)
     neuron_list = tuple(n for n in neurons.values() if n.scale != 1.0)
 
-    steering_scale = _scale(raw.get("steering_scale", 0.0), "ステアリング")
+    steering_scale = _scale(raw.get("steering_scale", 0.0), tr("ステアリング", "steering"))
     return Controls(node_scales=node_scales, neurons=neuron_list, steering_scale=steering_scale)
 
 
@@ -178,23 +179,23 @@ def override_target(controls: Controls, target: dict, value: float) -> Controls:
         return Controls(controls.node_scales, others + (NeuronControl(key[0], key[1], key[2], value),), controls.steering_scale)
     if t == "steering":
         return Controls(controls.node_scales, controls.neurons, value)
-    raise ControlError(f"スイープ対象の type は node / neuron / steering のいずれかです(指定値: {t!r})")
+    raise ControlError(tr(f"スイープ対象の type は node / neuron / steering のいずれかです(指定値: {t!r})", f"Sweep target type must be node, neuron or steering (got {t!r})"))
 
 
 def make_sweep_scales(start: float, stop: float, steps: int) -> list[float]:
     """start〜stopを等間隔にsteps点(両端を含む)。表示用に小数第4位で丸める。"""
     steps = int(steps)
     if steps < 2 or steps > 41:
-        raise ControlError("スイープの点数は 2〜41 で指定してください。")
-    start, stop = _scale(start, "スイープ開始"), _scale(stop, "スイープ終了")
+        raise ControlError(tr("スイープの点数は 2〜41 で指定してください。", "The number of sweep steps must be between 2 and 41."))
+    start, stop = _scale(start, tr("スイープ開始", "sweep start")), _scale(stop, tr("スイープ終了", "sweep stop"))
     if start == stop:
-        raise ControlError("スイープの開始と終了が同じです。")
+        raise ControlError(tr("スイープの開始と終了が同じです。", "Sweep start and stop are the same."))
     return [round(start + (stop - start) * i / (steps - 1), 4) for i in range(steps)]
 
 
 def validate_command(msg) -> dict:
     """stdinから届いた1行分のコマンドを検証する。"""
     if not isinstance(msg, dict) or msg.get("cmd") not in VALID_COMMANDS:
-        raise ControlError(f"不明なコマンドです: {msg!r}(使えるもの: {', '.join(VALID_COMMANDS)})")
+        raise ControlError(tr(f"不明なコマンドです: {msg!r}(使えるもの: {', '.join(VALID_COMMANDS)})", f"Unknown command: {msg!r} (available: {', '.join(VALID_COMMANDS)})"))
     return msg
 

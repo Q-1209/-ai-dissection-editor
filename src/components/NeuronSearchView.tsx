@@ -1,4 +1,5 @@
 import type { NeuronSearchResult } from "../electron.d";
+import { useLang } from "../app/i18n";
 
 interface NeuronSearchViewProps {
   result: NeuronSearchResult;
@@ -16,10 +17,11 @@ interface NeuronSearchViewProps {
  * まとめて担当する(resultのmodeフィールドで分岐)。
  */
 export function NeuronSearchView({ result, onProbeThisNeuron }: NeuronSearchViewProps) {
+  const { t } = useLang();
   if (!result.success) {
     return (
       <div style={{ color: "#e08a8a", fontSize: 12 }}>
-        エラー ({result.error_type}): {result.message}
+        {t("エラー", "Error")} ({result.error_type}): {result.message}
       </div>
     );
   }
@@ -28,23 +30,23 @@ export function NeuronSearchView({ result, onProbeThisNeuron }: NeuronSearchView
     if (result.ranked_neurons.length === 0) {
       return (
         <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          該当するニューロンが見つかりませんでした(対象の層・種類を見直してください)
+          {t("該当するニューロンが見つかりませんでした(対象の層・種類を見直してください)", "No matching neurons (check the layers and type)")}
         </div>
       );
     }
     return (
       <div>
         <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-          入力に強く反応した上位{result.ranked_neurons.length}件(スコア=系列内での活性化値の絶対値集約)
+          {t(`入力に強く反応した上位${result.ranked_neurons.length}件(スコア=系列内での活性化値の絶対値集約)`, `Top ${result.ranked_neurons.length} neurons for this input (score = aggregated |activation| over the sequence)`)}
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ textAlign: "left", color: "var(--text-muted)", fontSize: 10.5 }}>
               <th style={thStyle}>#</th>
-              <th style={thStyle}>層</th>
-              <th style={thStyle}>種類</th>
-              <th style={thStyle}>ニューロン番号</th>
-              <th style={thStyle}>スコア</th>
+              <th style={thStyle}>{t("層", "Layer")}</th>
+              <th style={thStyle}>{t("種類", "Type")}</th>
+              <th style={thStyle}>{t("ニューロン番号", "Neuron")}</th>
+              <th style={thStyle}>{t("スコア", "Score")}</th>
               {onProbeThisNeuron && <th style={thStyle} />}
             </tr>
           </thead>
@@ -56,7 +58,7 @@ export function NeuronSearchView({ result, onProbeThisNeuron }: NeuronSearchView
               >
                 <td style={tdStyle}>{i + 1}</td>
                 <td style={tdStyle}>{entry.layer_index}</td>
-                <td style={tdStyle}>{entry.kind === "mlp" ? "MLP" : "Attentionヘッド"}</td>
+                <td style={tdStyle}>{entry.kind === "mlp" ? "MLP" : t("Attentionヘッド", "Attention head")}</td>
                 <td style={tdStyle}>{entry.neuron_index}</td>
                 <td style={{ ...tdStyle, fontFamily: "var(--font-mono)" }}>
                   {entry.score.toFixed(4)}
@@ -75,7 +77,7 @@ export function NeuronSearchView({ result, onProbeThisNeuron }: NeuronSearchView
                         cursor: "pointer",
                       }}
                     >
-                      Probeへ
+                      {t("Probeへ", "Probe")}
                     </button>
                   </td>
                 )}
@@ -92,8 +94,8 @@ export function NeuronSearchView({ result, onProbeThisNeuron }: NeuronSearchView
   return (
     <div>
       <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-        層{result.layer_index} / {result.kind === "mlp" ? "MLP" : "Attentionヘッド"} / ニューロン番号{" "}
-        {result.neuron_index} — 各入力文への反応の強さ
+        {t("層", "Layer ")}{result.layer_index} / {result.kind === "mlp" ? "MLP" : t("Attentionヘッド", "Attention head")} /{" "}
+        {t("ニューロン番号", "neuron")} {result.neuron_index} — {t("各入力文への反応の強さ", "response to each input")}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {result.results.map((r, i) => (

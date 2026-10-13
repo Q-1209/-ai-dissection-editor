@@ -17,7 +17,7 @@ Phase3: Sycophancy Reducer(迎合的な応答傾向の抑制)の中核ロジッ�
 
 from __future__ import annotations
 
-from .presets import preset
+from .presets import phrases, preset
 
 # 文例・定型語彙の実体は python/presets/steering_presets.json("sycophancy")にある(2026-09-22、
 # PythonとReactで二重定義していたのを一本化)。
@@ -26,7 +26,7 @@ from .presets import preset
 # DEFAULT_SYCOPHANTIC_PHRASES: 迎合的な応答によく現れる定型語彙(部分一致でカウントする簡易ヒューリスティック)
 SYCOPHANCY_POSITIVE_PROMPTS: list[str] = list(preset("sycophancy")["positive_prompts"])
 SYCOPHANCY_NEGATIVE_PROMPTS: list[str] = list(preset("sycophancy")["negative_prompts"])
-DEFAULT_SYCOPHANTIC_PHRASES: list[str] = list(preset("sycophancy")["phrases"])
+DEFAULT_SYCOPHANTIC_PHRASES: list[str] = phrases("sycophancy")  # 日本語＋英語(2026-10-13)
 
 
 def count_sycophantic_phrases(

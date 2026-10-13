@@ -96,6 +96,7 @@ from inference.graph_validation import (  # noqa: E402
     topological_sort,
 )
 from inference.tokenizer_utils import TokenizerLoadError, resolve_stop_token_ids  # noqa: E402
+from inference.i18n import tr  # noqa: E402
 
 VALID_INTERVENTION_MODES = ("add", "ablate_direction")
 
@@ -133,14 +134,14 @@ def _build_nodes_edges(request: dict) -> tuple[list[GraphNode], list[tuple[str, 
     edges = [(e["source"], e["target"]) for e in request["edges"]]
 
     if not nodes:
-        raise GraphValidationError("グラフにノードが1つもありません。")
+        raise GraphValidationError(tr("グラフにノードが1つもありません。", "The graph has no nodes."))
 
     entry_candidates = [n.id for n in nodes if n.role == "embedding"]
     exit_candidates = [n.id for n in nodes if n.role == "lm_head"]
     if len(entry_candidates) != 1:
-        raise GraphValidationError(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。")
+        raise GraphValidationError(tr(f"embeddingノードは必ず1つ必要です(現在: {len(entry_candidates)}個)。", f"Exactly one embedding node is required (found {len(entry_candidates)})."))
     if len(exit_candidates) != 1:
-        raise GraphValidationError(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。")
+        raise GraphValidationError(tr(f"lm_headノードは必ず1つ必要です(現在: {len(exit_candidates)}個)。", f"Exactly one lm_head node is required (found {len(exit_candidates)})."))
     entry_node_id = entry_candidates[0]
     exit_node_id = exit_candidates[0]
 
@@ -159,16 +160,16 @@ def run_steering(request: dict) -> dict:
     negative_prompts = request.get("negative_prompts", [])
     target_node_ids = request.get("target_node_ids", [])
     if not positive_prompts:
-        raise GraphValidationError("positive_prompts を1つ以上指定してください。")
+        raise GraphValidationError(tr("positive_prompts を1つ以上指定してください。", "Give at least one positive prompt."))
     if not negative_prompts:
-        raise GraphValidationError("negative_prompts を1つ以上指定してください。")
+        raise GraphValidationError(tr("negative_prompts を1つ以上指定してください。", "Give at least one negative prompt."))
     if not target_node_ids:
-        raise GraphValidationError("target_node_ids(ステアリング対象ノード)を1つ以上指定してください。")
+        raise GraphValidationError(tr("target_node_ids(ステアリング対象ノード)を1つ以上指定してください。", "Give at least one steering target node (target_node_ids)."))
 
     intervention_mode = request.get("intervention_mode", "add")
     if intervention_mode not in VALID_INTERVENTION_MODES:
         raise GraphValidationError(
-            f"intervention_mode は {VALID_INTERVENTION_MODES} のいずれかを指定してください(指定値: {intervention_mode!r})。"
+            tr(f"intervention_mode は {VALID_INTERVENTION_MODES} のいずれかを指定してください(指定値: {intervention_mode!r})。", f"intervention_mode must be one of {VALID_INTERVENTION_MODES} (got {intervention_mode!r}).")
         )
     use_chat_template = bool(request.get("use_chat_template", False))
 
@@ -176,7 +177,7 @@ def run_steering(request: dict) -> dict:
     unmatched = set(target_node_ids) - node_ids
     if unmatched:
         raise GraphValidationError(
-            f"ステアリング対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}"
+            tr(f"ステアリング対象として指定されたノードIDがグラフ内に存在しません: {sorted(unmatched)}", f"Steering target node IDs are not in the graph: {sorted(unmatched)}")
         )
 
     import torch  # noqa: PLC0415
@@ -197,7 +198,7 @@ def run_steering(request: dict) -> dict:
         # 表れる位置の活性化値でベクトルを作ることになる(Arditi et al.と同じ位置の取り方)
         ids = encode_text(tokenizer, text, model_dir=model_dir, use_chat_template=use_chat_template)
         if not ids:
-            raise GraphValidationError(f"入力テキストのトークナイズ結果が空でした: {text!r}")
+            raise GraphValidationError(tr(f"入力テキストのトークナイズ結果が空でした: {text!r}", f"The input text tokenized to nothing: {text!r}"))
         return torch.tensor([ids])
 
     positive_input_ids = [encode(p) for p in positive_prompts]
@@ -229,7 +230,7 @@ def run_steering(request: dict) -> dict:
             tokenizer, input_text, model_dir=model_dir, use_chat_template=use_chat_template
         )
         if not input_ids_list:
-            raise GraphValidationError("入力テキストのトークナイズ結果が空でした。")
+            raise GraphValidationError(tr("入力テキストのトークナイズ結果が空でした。", "The input text tokenized to nothing."))
         input_tokens_text = [decode_tokens(tokenizer, [tid]) for tid in input_ids_list]
     else:
         input_ids_list = request.get("input_ids", [1, 2, 3, 4, 5])

@@ -33,6 +33,7 @@ from .graph_validation import (
 from .layers import apply_rope, attention, build_rope_cache, linear, merge_tensors, rms_norm, swiglu_mlp
 from .load_weights import list_available_keys, load_model_weights
 from .sampling import SamplingConfig, sample_next_token
+from .i18n import tr
 
 
 @dataclass
@@ -426,9 +427,9 @@ class LlamaGraphExecutor:
                 for sid, t in zip(source_ids[1:], source_tensors[1:]):
                     if int(t.shape[-1]) != first_dim:
                         raise GraphValidationError(
-                            f"合流先ノード '{node_id}' への入力のshapeが一致していません: "
+                            tr(f"合流先ノード '{node_id}' への入力のshapeが一致していません: "
                             f"'{source_ids[0]}' は次元{first_dim}、'{sid}' は次元{int(t.shape[-1])}。"
-                            f"合流させるノード同士は同じhidden_sizeを持つ必要があります。"
+                            f"合流させるノード同士は同じhidden_sizeを持つ必要があります。", f"The inputs merged into '{node_id}' have different shapes: " f"'{source_ids[0]}' has dim {first_dim}, '{sid}' has dim {int(t.shape[-1])}. " f"Merged nodes must share the same hidden_size.")
                         )
             x = merge_tensors(source_tensors, node.merge_mode)
             x_in = x
@@ -520,8 +521,8 @@ class LlamaGraphExecutor:
 
         if exit_node_id not in outputs:
             raise GraphValidationError(
-                f"exit_node_id '{exit_node_id}' was never executed. "
-                f"embeddingからexit_nodeまでの経路が繋がっているか確認してください。"
+                tr(f"exit_node_id '{exit_node_id}' was never executed. "
+                f"embeddingからexit_nodeまでの経路が繋がっているか確認してください。", f"exit_node_id '{exit_node_id}' was never executed. " f"Check that there is a connected path from the embedding to the exit node.")
             )
 
         return ExecutionResult(logits=outputs[exit_node_id], node_order=executed_ids, internals=internals)

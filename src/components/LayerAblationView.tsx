@@ -1,4 +1,5 @@
 import type { LayerAblationResult } from "../electron.d";
+import { useLang } from "../app/i18n";
 
 interface LayerAblationViewProps {
   result: LayerAblationResult;
@@ -14,10 +15,11 @@ interface LayerAblationViewProps {
  * - 測定指標: KLダイバージェンス + 生成テキストの変化(両方)
  */
 export function LayerAblationView({ result }: LayerAblationViewProps) {
+  const { t } = useLang();
   if (!result.success) {
     return (
       <div style={{ color: "#e08a8a", fontSize: 12 }}>
-        エラー ({result.error_type}): {result.message}
+        {t("エラー", "Error")} ({result.error_type}): {result.message}
       </div>
     );
   }
@@ -25,7 +27,7 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
-        無効化したノード: {result.ablated_node_ids.join(", ")}
+        {t("無効化したノード", "Ablated nodes")}: {result.ablated_node_ids.join(", ")}
       </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
@@ -38,7 +40,7 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
           }}
         >
           <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 4 }}>
-            次トークン分布のKLダイバージェンス(通常時→無効化時)
+            {t("次トークン分布のKLダイバージェンス(通常時→無効化時)", "KL divergence of the next-token distribution (normal → ablated)")}
           </div>
           <div style={{ fontSize: 22, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
             {result.kl_divergence.toFixed(4)}
@@ -54,7 +56,7 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
           }}
         >
           <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 4 }}>
-            最有力トークンの変化
+            {t("最有力トークンの変化", "Top token")}
           </div>
           <div
             style={{
@@ -63,12 +65,12 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
               color: result.top_token_changed ? "#e0b45a" : "var(--text-primary)",
             }}
           >
-            {result.top_token_changed ? "変化あり" : "変化なし"}
+            {result.top_token_changed ? t("変化あり", "Changed") : t("変化なし", "Unchanged")}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 6 }}>
-            通常時: {result.baseline_top_token_text ?? `ID ${result.baseline_top_token_id}`}
+            {t("通常時", "Normal")}: {result.baseline_top_token_text ?? `ID ${result.baseline_top_token_id}`}
             {" → "}
-            無効化時: {result.ablated_top_token_text ?? `ID ${result.ablated_top_token_id}`}
+            {t("無効化時", "Ablated")}: {result.ablated_top_token_text ?? `ID ${result.ablated_top_token_id}`}
           </div>
         </div>
       </div>
@@ -76,7 +78,7 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
       {(result.generated_text_baseline !== null || result.generated_text_ablated !== null) && (
         <div>
           <div style={{ fontSize: 10.5, color: "var(--text-muted)", marginBottom: 6 }}>
-            生成テキストの比較
+            {t("生成テキストの比較", "Generated text")}
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <div
@@ -87,9 +89,9 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
                 padding: "8px 10px",
               }}
             >
-              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>通常時</div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{t("通常時", "Normal")}</div>
               <div style={{ fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
-                {result.generated_text_baseline || "(空)"}
+                {result.generated_text_baseline || t("(空)", "(empty)")}
               </div>
             </div>
             <div
@@ -102,10 +104,10 @@ export function LayerAblationView({ result }: LayerAblationViewProps) {
               }}
             >
               <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>
-                無効化時
+                {t("無効化時", "Ablated")}
               </div>
               <div style={{ fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
-                {result.generated_text_ablated || "(空)"}
+                {result.generated_text_ablated || t("(空)", "(empty)")}
               </div>
             </div>
           </div>

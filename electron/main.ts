@@ -16,6 +16,15 @@ function defaultPythonBin(): string {
   return process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
 }
 
+/**
+ * 画面の表示言語(2026-10-13、英語UI)。レンダラーから lang:set で受け取り、Python子プロセスに
+ * 環境変数 AIDE_LANG で渡す(Python側のエラー文の言語。python/inference/i18n.py参照)。
+ */
+let uiLang: "ja" | "en" = "ja";
+ipcMain.on("lang:set", (_event, lang: unknown) => {
+  if (lang === "ja" || lang === "en") uiLang = lang;
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -80,7 +89,7 @@ ipcMain.handle("model:inspect", async (_event, modelDir: string) => {
       scriptPath,
       modelDir,
     ], {
-      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+      env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
     });
 
     let stdout = "";
@@ -147,7 +156,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -227,7 +236,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -303,7 +312,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -378,7 +387,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -459,7 +468,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -544,7 +553,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -618,7 +627,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -703,7 +712,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -799,7 +808,7 @@ ipcMain.handle(
 
       const pythonBin = defaultPythonBin();
       const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-        env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
       });
 
       let stdout = "";
@@ -908,7 +917,7 @@ ipcMain.handle(
       : path.join(process.resourcesPath, "python/run_live_session.py");
     const pythonBin = defaultPythonBin();
     const child: ChildProcessWithoutNullStreams = spawn(pythonBin, [scriptPath], {
-      env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
+      env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
     });
     liveChild = child;
 
@@ -957,7 +966,7 @@ ipcMain.handle(
 );
 
 ipcMain.handle("live:send", async (_event, command: Record<string, unknown>) => {
-  if (!liveChild) return { sent: false, message: "セッションが開始されていません" };
+  if (!liveChild) return { sent: false, message: uiLang === "en" ? "No session is running" : "セッションが開始されていません" };
   liveChild.stdin.write(JSON.stringify(command) + "\n");
   return { sent: true };
 });

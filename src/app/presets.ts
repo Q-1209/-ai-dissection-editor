@@ -12,3 +12,9 @@ export const SYCOPHANCY_NEGATIVE_PROMPTS: string[] = presets.sycophancy.negative
 // 差分(positive - negative)が「拒否方向」になる(2026-09-22確認事項)。
 export const REFUSAL_POSITIVE_PROMPTS: string[] = presets.refusal.positive_prompts;
 export const REFUSAL_NEGATIVE_PROMPTS: string[] = presets.refusal.negative_prompts;
+
+// 英語UI用の文例(2026-10-13追加)。画面が英語のときはこちらを使う
+export const SYCOPHANCY_POSITIVE_PROMPTS_EN: string[] = presets.en.sycophancy.positive_prompts;
+export const SYCOPHANCY_NEGATIVE_PROMPTS_EN: string[] = presets.en.sycophancy.negative_prompts;
+export const REFUSAL_POSITIVE_PROMPTS_EN: string[] = presets.en.refusal.positive_prompts;
+export const REFUSAL_NEGATIVE_PROMPTS_EN: string[] = presets.en.refusal.negative_prompts;

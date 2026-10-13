@@ -561,6 +561,7 @@ export type LiveEvent =
   | { event: "exited"; code: number | null; stderr: string };
 
 export interface ElectronAPI {
+  setLang?: (lang: "ja" | "en") => void;
   selectModelDir: () => Promise<string | null>;
   inspectModel: (modelDir: string) => Promise<ModelInspectResult>;
   executeModel: (payload: ExecutionRequest) => Promise<ExecutionResult>;
