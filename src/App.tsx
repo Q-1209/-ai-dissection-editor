@@ -290,6 +290,20 @@ export default function App() {
     [setExecEdges]
   );
 
+  // 2026-10-13修正: ノードを削除(選択してBackspace)しても実行用のノード定義に残り、
+  // 「どこにも接続されていないノード」として実行エラーになっていた。削除をノード定義にも反映する
+  const handleExecNodesChange = useCallback(
+    (changes: Parameters<typeof onExecNodesChange>[0]) => {
+      onExecNodesChange(changes);
+      const removed = new Set(changes.filter((c) => c.type === "remove").map((c) => c.id));
+      if (removed.size > 0) {
+        setExecutionNodeDefs((prev) => prev.filter((n) => !removed.has(n.id)));
+        setRunState({ status: "idle" });
+      }
+    },
+    [onExecNodesChange]
+  );
+
   const handleExecEdgesChange = useCallback(
     (changes: Parameters<typeof onExecEdgesChange>[0]) => {
       onExecEdgesChange(changes);
@@ -1650,7 +1664,7 @@ export default function App() {
           <ReactFlow
             nodes={displayExecNodes}
             edges={execEdges}
-            onNodesChange={onExecNodesChange}
+            onNodesChange={handleExecNodesChange}
             onEdgesChange={handleExecEdgesChange}
             onConnect={handleExecConnect}
             onNodeClick={handleExecNodeClick}
