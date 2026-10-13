@@ -12,7 +12,7 @@ Most node-based AI tools (ComfyUI, LangFlow, Flowise) call a model from the outs
 
 > **Status: early, solo-developed, and I'm looking for feedback.** Everything below runs on my machine (Windows, Qwen2.5-0.5B-Instruct). I'm publishing now, before adding more features, to find out whether this is useful to anyone. If you try it, I'd love to hear what worked, what broke, and what you'd use it for. See [Feedback](#feedback).
 
-<!-- TODO(漣): add a 20–30 s demo GIF here: docs/demo.gif -->
+![Demo: expand a layer, skip layer 12 by rewiring the graph, then steer layer 13](docs/demo.gif)
 
 ## What it can do today
 
