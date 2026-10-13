@@ -47,8 +47,8 @@ Tested on **Windows** with **Qwen2.5-0.5B-Instruct** on CPU. macOS and Linux sho
 **Requirements:** Node.js 22 LTS, Python 3.10+, Git, about 2 GB of disk for the small model.
 
 ```bash
-git clone https://github.com/Q-1209/-ai-dissection-editor.git
-cd -ai-dissection-editor
+git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
+cd ai-dissection-editor
 
 # 1. Python side (CPU build of PyTorch is enough for 0.5B models)
 pip install torch --index-url https://download.pytorch.org/whl/cpu

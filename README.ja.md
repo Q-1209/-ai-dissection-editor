@@ -47,8 +47,8 @@ ComfyUIやLangFlowのような既存のノード系ツールは、モデルを�
 **必要なもの:** Node.js 22 LTS、Python 3.10以上、Git、小型モデル用の空き容量約2GB
 
 ```bash
-git clone https://github.com/Q-1209/-ai-dissection-editor.git
-cd -ai-dissection-editor
+git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
+cd ai-dissection-editor
 
 # 1. Python側(0.5BモデルならCPU版PyTorchで十分)
 pip install torch --index-url https://download.pytorch.org/whl/cpu
