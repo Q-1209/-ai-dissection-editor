@@ -1,0 +1,56 @@
+name: "I tried it / 使ってみた"
+description: "Tell us how it went, even in one line. / 一言でも大歓迎です。"
+title: "[Tried it] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying AI Dissection Editor! Short answers are fine. Skip anything you like.
+        試していただきありがとうございます。短くて大丈夫です。答えたくない項目は飛ばしてください。
+  - type: dropdown
+    id: got_running
+    attributes:
+      label: "Did you get it running? / 起動できましたか？"
+      options:
+        - "Yes, without trouble / すんなり起動できた"
+        - "Yes, after some fixing / 手こずったが起動できた"
+        - "No / 起動できなかった"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: "OS and model / OSと使ったモデル"
+      placeholder: "Windows 11, Qwen2.5-0.5B-Instruct"
+  - type: checkboxes
+    id: features
+    attributes:
+      label: "What did you try? / 試した機能"
+      options:
+        - label: "Structure viewer / 構造ビューア（解剖）"
+        - label: "Rewiring and generation / 繋ぎ替え・生成（実行）"
+        - label: "Attention, activations, token journey, sensitivity / 内部状態・Token Journey・Sensitivity"
+        - label: "Activation steering, sycophancy, refusal / ステアリング・迎合・拒否"
+        - label: "Live slider / Live Slider"
+  - type: textarea
+    id: liked
+    attributes:
+      label: "What was useful or interesting? / 役に立った・面白かったこと"
+  - type: textarea
+    id: broken
+    attributes:
+      label: "What was confusing or broken? / わかりにくかった・壊れていたこと"
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "What would you use it for? / 何に使えそうですか？"
+      description: "Learning, research, teaching, model tinkering, nothing yet... / 学習、研究、教育、モデルいじり、特になし…"
+  - type: dropdown
+    id: would_pay
+    attributes:
+      label: "Would you pay for a polished version, such as a one-click installer, bigger-model support, or more tools? / 完成度の高い版（ワンクリック導入・大型モデル対応・機能追加など）にお金を払いますか？"
+      options:
+        - "No, I'd only use it for free / 無料なら使う"
+        - "Maybe, depending on features / 機能しだい"
+        - "Yes / 払う"
