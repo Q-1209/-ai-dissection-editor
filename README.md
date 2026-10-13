@@ -14,6 +14,8 @@ Most node-based AI tools (ComfyUI, LangFlow, Flowise) call a model from the outs
 
 ![Demo: expand a layer, skip layer 12 by rewiring the graph, then steer layer 13](docs/demo.gif)
 
+*Skipping layer 12 turns "How can I assist you today?" into "How can I help you today?". Steering layer 13 makes the model talk about its day instead of saying it doesn't have one.*
+
 ## What it can do today
 
 | Tab | Feature | What you see |
@@ -71,9 +73,9 @@ $env:PYTHON_BIN = "C:\path\to\python.exe"   # PowerShell
 npm run electron:dev
 ```
 
-Then click **モデルフォルダを開く** ("Open model folder") and select `models/Qwen2.5-0.5B-Instruct`.
+Then click **Open model folder** and select `models/Qwen2.5-0.5B-Instruct`.
 
-> **Note: the UI is currently Japanese only.** The tab names are 解剖 = Dissect, 実行 = Run, 観察 = Observe. An English UI is the first thing I'll add if people want it, so please say so in an issue.
+The UI is in English and Japanese. It follows your OS language, and the button at the top right switches it.
 
 ### Supported models
 
@@ -111,7 +113,7 @@ Pull requests are welcome too. For big changes, please open an issue first.
 
 ## Roadmap (tentative)
 
-Next up, depending on feedback: an English UI, broader Llama/Mistral verification, and direct weight editing. Further out, I'm considering LoRA training, model diffing and auditing tools, and MoE support. Feedback decides the order.
+Next up, depending on feedback: broader Llama/Mistral verification and direct weight editing. Further out, I'm considering LoRA training, model diffing and auditing tools, and MoE support. Feedback decides the order.
 
 ## License
 
