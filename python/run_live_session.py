@@ -256,6 +256,17 @@ def main() -> None:
     sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8", errors="replace")
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    # 2026-10-13修正: DLLを含むモジュール(torch・numpy・tokenizers)は、stdinの読み取りスレッドを始める前に読み込む。
+    # Windowsでは、別スレッドがstdin(パイプ)の読み取りで待っている間にDLLを読み込むと、stdinが閉じられるまで
+    # 読み込みが止まる(実機で init がモデル読み込み前のnumpyで停止した。stdinを閉じる試験では再現しない)
+    import torch  # noqa: F401, PLC0415
+    from inference import live_session, sampling  # noqa: F401, PLC0415
+
+    try:
+        import tokenizers  # noqa: F401, PLC0415
+    except ImportError:
+        pass  # 未インストールの場合は init で TokenizerLoadError として報告される
+
     inbox: "queue.Queue[dict | None]" = queue.Queue()
     threading.Thread(target=reader, args=(inbox, sys.stdin), daemon=True).start()
     Server(inbox).serve()
