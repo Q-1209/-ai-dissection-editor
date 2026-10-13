@@ -74,3 +74,28 @@ body,
   background: var(--bg-app);
   color: var(--text-primary);
 }
+
+/* 上部ツールバー: 項目が多いタブ(観察のSteering等)で、ボタンが縦長に潰れて縦書きになっていた(2026-10-13)。
+   ボタン・入力欄は縮めずに折り返し、説明文だけは幅を確保したうえで折り返す */
+.app-header > button,
+.app-header > label,
+.app-header > input,
+.app-header > select,
+.app-header > strong,
+.app-header button,
+.app-header label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* サブタブ等のボタン群は、ウィンドウが狭いときは群の中で折り返す */
+.app-header > div {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.app-header > span {
+  flex-shrink: 0;
+  max-width: 360px;
+}

@@ -909,8 +909,10 @@ export default function App() {
   return (
     <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column" }}>
       <header
+        className="app-header"
         style={{
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "center",
           gap: 10,
           padding: "10px 16px",
