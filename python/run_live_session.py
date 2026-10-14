@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import queue
 import sys
 import threading
@@ -275,3 +276,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+    # 2026-10-13修正: 通常の終了処理に任せると、stdin待ちのまま残った読み取りスレッドとtorchの後片付けが
+    # 重なり、Windowsで終了コードが 0xC0000005(アクセス違反)になっていた。出力を流しきってから即座に終了する
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
