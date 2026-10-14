@@ -51,6 +51,7 @@ git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-edit
 cd ai-dissection-editor
 
 # 1. Python側(0.5BモデルならCPU版PyTorchで十分)
+python -m pip install --upgrade pip
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 
