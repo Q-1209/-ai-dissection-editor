@@ -49,6 +49,24 @@ def resolve_output_key(internals: dict[str, torch.Tensor], node_id: str) -> str:
     )
 
 
+def single_token_prompt_warnings(prompts: list[str], input_ids: list[torch.Tensor]) -> list[str]:
+    """1トークンしかないプロンプトへの警告(2026-10-14追加)。
+
+    ベクトルは各プロンプトの最後のトークン位置から作るため、1トークンのプロンプトでは文頭(位置0)の値を使うことになる。
+    文頭には他の位置より桁違いに大きな活性化が立つ(attention sink / massive activations)ので、差分ベクトルが
+    「文頭であること」を拾ってしまい、出力が崩壊する(実機: 「ありがとう」1語でノルム1865、2文なら12.9)。
+    """
+    short = [p for p, ids in zip(prompts, input_ids) if ids.shape[-1] <= 1]
+    if not short:
+        return []
+    return [tr(
+        f"1トークンしかないプロンプトがあります: {short}。ベクトルは各プロンプトの最後のトークン位置から作るため、"
+        f"1トークンだと文頭の桁違いに大きな活性化を拾って出力が崩壊しやすくなります。数トークン以上の文にしてください。",
+        f"Some prompts are a single token: {short}. The vector comes from each prompt's last token, so a one-token prompt "
+        f"picks up the very large activations at the start of the text and tends to break the output. Use longer phrases.",
+    )]
+
+
 def compute_steering_vectors(
     executor: LlamaGraphExecutor,
     nodes: list[GraphNode],

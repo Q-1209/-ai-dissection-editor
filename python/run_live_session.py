@@ -169,7 +169,7 @@ class Server:
                 norms = self.session.set_steering(
                     msg.get("positive_prompts") or [], msg.get("negative_prompts") or [], msg.get("target_node_ids") or []
                 )
-                emit({"event": "steering_ready", "vector_norms": norms})
+                emit({"event": "steering_ready", "vector_norms": norms, "warnings": getattr(self.session, "steering_warnings", [])})
             elif cmd == "generate":
                 self._generate(msg)
             elif cmd == "sweep":

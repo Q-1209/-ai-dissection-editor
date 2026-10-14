@@ -441,6 +441,7 @@ export interface ActivationSteeringSuccessResult {
   target_node_ids: string[];
   scale: number;
   vector_norms: Record<string, number>; // 各対象ノードの差分ベクトルのL2ノルム(GUI表示用)
+  warnings?: string[]; // 2026-10-14: 1トークンのプロンプトなど、結果が信用しにくい条件への警告
   input_token_ids: number[];
   input_tokens_text: string[] | null;
   kl_divergence: number; // 最後の位置の次トークン分布、通常時→ステアリング適用時のKL
@@ -535,7 +536,7 @@ export type LiveEvent =
       limits: { node_ids: string[]; num_layers: number; intermediate_size: number; num_heads: number };
       use_chat_template: boolean;
     }
-  | { event: "steering_ready"; vector_norms: Record<string, number> }
+  | { event: "steering_ready"; vector_norms: Record<string, number>; warnings?: string[] }
   | { event: "controls_applied"; version: number; controls: LiveControls }
   | { event: "started"; input_token_count: number }
   | { event: "baseline"; text: string; token_count: number }

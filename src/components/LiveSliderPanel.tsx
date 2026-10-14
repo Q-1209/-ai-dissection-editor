@@ -112,6 +112,7 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
   });
   const [steeringScale, setSteeringScale] = useState(0);
   const [steeringNorms, setSteeringNorms] = useState<Record<string, number> | null>(null);
+  const [steeringWarnings, setSteeringWarnings] = useState<string[]>([]);
   const [steeringBusy, setSteeringBusy] = useState(false);
   const [appliedVersion, setAppliedVersion] = useState(0);
 
@@ -145,6 +146,7 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
           break;
         case "steering_ready":
           setSteeringNorms(ev.vector_norms);
+          setSteeringWarnings(ev.warnings ?? []);
           setSteeringBusy(false);
           break;
         case "controls_applied":
@@ -410,7 +412,10 @@ export function LiveSliderPanel(props: LiveSliderPanelProps) {
             </span>
           </div>
           {steeringNorms ? (
+            <>
+            {steeringWarnings.map((w) => <Note key={w}><span style={{ color: "#e0b45a" }}>⚠ {w}</span></Note>)}
             <SliderRow label={t("強さ", "Strength")} value={steeringScale} range={STEERING_RANGE} onChange={setSteeringScale} />
+            </>
           ) : (
             <Note>{t("先にベクトルを計算してください(対象ノードはActivation Steeringタブで選択)。", "Compute the vector first (pick target nodes in the Activation Steering tab).")}</Note>
           )}

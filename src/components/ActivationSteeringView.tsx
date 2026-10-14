@@ -84,6 +84,11 @@ export function ActivationSteeringView({ result }: ActivationSteeringViewProps) 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {result.warnings?.map((w) => (
+        <div key={w} style={{ fontSize: 12, color: "#e0b45a", border: "1px solid #e0b45a55", borderRadius: "var(--radius-sm)", padding: "8px 10px" }}>
+          ⚠ {w}
+        </div>
+      ))}
       <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
         {t("ステアリング対象ノード", "Target nodes")}: {result.target_node_ids.join(", ")} (
         {result.intervention_mode === "ablate_direction" ? t("方向除去", "ablate direction") : `${t("加算", "add")} scale: ${result.scale}`}

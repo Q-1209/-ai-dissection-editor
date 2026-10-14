@@ -319,3 +319,21 @@ def test_live_session_subprocess_roundtrip(tiny):
     assert "baseline" in kinds and kinds[-1] == "done"
     started = next(e for e in events if e["event"] == "started")
     assert started["input_token_count"] > 20  # チャットテンプレートで包まれている
+
+
+def test_single_token_prompt_warning():
+    """2026-10-14: 1トークンのプロンプトでは、文頭の巨大な活性化を拾うので警告を返す(テンプレートなしのとき)。"""
+    import torch  # noqa: PLC0415
+    from inference.steering import single_token_prompt_warnings  # noqa: PLC0415
+
+    ids = [torch.tensor([[5]]), torch.tensor([[5, 6, 7]])]
+    w = single_token_prompt_warnings(["a", "abc"], ids)
+    assert len(w) == 1 and "'a'" in w[0] and "'abc'" not in w[0]
+    assert single_token_prompt_warnings(["abc"], [torch.tensor([[1, 2]])]) == []
+
+
+def test_steering_result_has_warnings_field(tiny):
+    _, _, base = tiny
+    r = run_entry("run_activation_steering.py", {**base, **STEER, "scale": 1.0, "use_chat_template": True})
+    assert r["success"], r
+    assert r["warnings"] == []  # テンプレートで包むと1トークンにはならない

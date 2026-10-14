@@ -67,6 +67,7 @@ class LiveSession:
             num_heads=int(config["num_attention_heads"]),
         )
         self.steering_vectors: dict[str, torch.Tensor] | None = None
+        self.steering_warnings: list[str] = []
         self.stop_token_ids = get_stop_token_ids(self.model_dir, tokenizer) if use_chat_template else []
 
     # --- 準備 ---------------------------------------------------------------
@@ -79,19 +80,22 @@ class LiveSession:
 
     def set_steering(self, positive_prompts: list[str], negative_prompts: list[str], target_node_ids: list[str]) -> dict:
         """ステアリングベクトルを計算して保持する(スライダーでは強さだけを動かす)。戻り値: 各ノードのノルム。"""
-        from .steering import compute_steering_vectors  # noqa: PLC0415
+        from .steering import compute_steering_vectors, single_token_prompt_warnings  # noqa: PLC0415
 
         unknown = set(target_node_ids) - {n.id for n in self.nodes}
         if unknown:
             raise GraphValidationError(tr(f"ステアリング対象のノードがグラフ内にありません: {sorted(unknown)}", f"Steering target nodes are not in the graph: {sorted(unknown)}"))
         if not positive_prompts or not negative_prompts or not target_node_ids:
             raise GraphValidationError(tr("ステアリングには positive/negative のプロンプトと対象ノードが1つ以上必要です。", "Steering needs at least one positive prompt, one negative prompt and one target node."))
+        pos_ids = [self.encode(p) for p in positive_prompts]
+        neg_ids = [self.encode(p) for p in negative_prompts]
         self.steering_vectors = compute_steering_vectors(
             self.executor, self.nodes, self.edges, entry_node_id=self.entry, exit_node_id=self.exit,
-            positive_input_ids=[self.encode(p) for p in positive_prompts],
-            negative_input_ids=[self.encode(p) for p in negative_prompts],
+            positive_input_ids=pos_ids,
+            negative_input_ids=neg_ids,
             target_node_ids=list(target_node_ids),
         )
+        self.steering_warnings = single_token_prompt_warnings(list(positive_prompts) + list(negative_prompts), pos_ids + neg_ids)
         return {nid: float(v.norm()) for nid, v in self.steering_vectors.items()}
 
     def execute_kwargs(self, controls: Controls) -> dict:

@@ -184,7 +184,7 @@ def run_steering(request: dict) -> dict:
 
     from inference.graph_runner import LlamaGraphExecutor  # noqa: PLC0415
     from inference.sensitivity import compute_kl_divergence  # noqa: PLC0415
-    from inference.steering import compute_steering_vectors  # noqa: PLC0415
+    from inference.steering import compute_steering_vectors, single_token_prompt_warnings  # noqa: PLC0415
     from inference.tokenizer_utils import decode_tokens, encode_text, load_tokenizer  # noqa: PLC0415
 
     executor = LlamaGraphExecutor(model_dir, config)
@@ -211,6 +211,7 @@ def run_steering(request: dict) -> dict:
         target_node_ids=target_node_ids,
     )
     vector_norms = {nid: float(vec.norm()) for nid, vec in steering_vectors.items()}
+    warnings = single_token_prompt_warnings(positive_prompts + negative_prompts, positive_input_ids + negative_input_ids)
 
     scale = float(request.get("scale", 1.0))
 
@@ -258,6 +259,7 @@ def run_steering(request: dict) -> dict:
         "target_node_ids": target_node_ids,
         "scale": scale,
         "vector_norms": vector_norms,
+        "warnings": warnings,
         "input_token_ids": input_ids_list,
         "input_tokens_text": input_tokens_text,
         "kl_divergence": kl,
