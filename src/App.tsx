@@ -946,7 +946,7 @@ export default function App() {
       : null;
 
   return (
-    <div style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <header
         className="app-header"
         style={{
@@ -1668,7 +1668,8 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ flex: 1, position: "relative", background: "var(--bg-app)" }}>
+      {/* minHeight: 0 がないと、中身の高い観察タブでこの領域が画面より伸び、ホイールでページ全体がずれていた(2026-10-18) */}
+      <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden", background: "var(--bg-app)" }}>
         {tab === "dissect" && (
           <ReactFlow
             nodes={nodes}
