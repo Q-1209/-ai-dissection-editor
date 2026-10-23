@@ -320,6 +320,8 @@ class LlamaGraphExecutor:
         ablation_directions: dict[str, torch.Tensor] | None = None,
         node_scales: dict[str, float] | None = None,
         neuron_scales: dict[str, torch.Tensor] | None = None,
+        noise_strengths: dict[str, float] | None = None,
+        noise_generator: torch.Generator | None = None,
     ) -> ExecutionResult:
         """エッジで実際に接続されている経路に従って、順番に計算を適用していく(1ステップ分)。
 
@@ -379,6 +381,12 @@ class LlamaGraphExecutor:
         neuron_scales: Live Slider(2026-09-24追加)用。キーは "{layer_prefix}.mlp"(値は
                   [intermediate_size]の倍率ベクトル)または "{layer_prefix}.self_attn"([num_heads])。
                   layer_prefixは "model.layers.N"。展開済み・折りたたみ(layer_block)どちらのノードにも効く。
+        noise_strengths: Noise Injection(2026-10-24追加)用。{node_id: 強さ}。対象ノードの最終出力の
+                  各トークン位置に、大きさ「強さ × その位置の出力の大きさ」でランダムな向きの雑音を足す
+                  (noise_utils.add_relative_noiseと同じ式)。方向除去・ステアリング加算の後に適用する。
+                  ablatedなノードには適用しない。
+        noise_generator: 雑音を引く乱数生成器(CPU)。呼び出し元が種を固定して渡すと結果が再現できる。
+                  generate()では同じ生成器を全ステップで使い続けるので、1ステップごとに新しい雑音になる。
         """
         assert self._weights is not None, "call load_weights_for_nodes() first"
 
@@ -513,6 +521,16 @@ class LlamaGraphExecutor:
                 steering_vec = steering_vectors[node_id].to(dtype=x.dtype, device=x.device)
                 x = x + steering_scale * steering_vec
 
+            if noise_strengths is not None and node_id in noise_strengths and not node.ablated:
+                # Noise Injection(2026-10-24追加): 位置ごとに単位ベクトルの雑音を引き、
+                # その位置の出力の大きさ×強さに伸ばして足す(float32で計算して元のdtypeに戻す)
+                s = float(noise_strengths[node_id])
+                if s > 0:
+                    x_f32 = x.float()
+                    eps = torch.randn(x_f32.shape, generator=noise_generator, dtype=torch.float32).to(x.device)
+                    eps = eps / eps.norm(dim=-1, keepdim=True).clamp_min(1e-12)
+                    x = (x_f32 + s * x_f32.norm(dim=-1, keepdim=True) * eps).to(x.dtype)
+
             if node.role != "lm_head":
                 validate_shape_compatibility(int(x.shape[-1]), self.hidden_size, node.id, "next node")
 
@@ -541,6 +559,8 @@ class LlamaGraphExecutor:
         steering_scale: float = 1.0,
         ablation_directions: dict[str, torch.Tensor] | None = None,
         stop_token_ids: list[int] | None = None,
+        noise_strengths: dict[str, float] | None = None,
+        noise_generator: torch.Generator | None = None,
     ) -> "GenerationResult":
         """KVキャッシュを使って複数トークンを逐次生成する。
 
@@ -568,6 +588,8 @@ class LlamaGraphExecutor:
         stop_token_ids: 指定した場合(2026-09-22追加、チャットテンプレート適用時)、
         これらのトークンが生成された時点で生成を打ち切る(停止トークン自体は結果に含めない)。
         Noneなら従来どおりmax_new_tokens分を最後まで生成する。
+        noise_strengths/noise_generator: Noise Injection(2026-10-24追加)用。execute()に引き継ぎ、
+        同じ生成器を使い続けるので、生成の1ステップごとに新しい雑音が足される。
         """
         assert self._weights is not None, "call load_weights_for_nodes() first"
 
@@ -594,6 +616,8 @@ class LlamaGraphExecutor:
                 steering_vectors=steering_vectors,
                 steering_scale=steering_scale,
                 ablation_directions=ablation_directions,
+                noise_strengths=noise_strengths,
+                noise_generator=noise_generator,
             )
             if step == 0:
                 # 実行順序はどのステップでも同じグラフ構造から来るため、最初のステップの

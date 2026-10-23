@@ -6,6 +6,7 @@ interface SweepChartProps {
   points: LiveSweepPoint[];
   currentScale: number | null; // 今のスライダーの値(縦の破線で示す)
   xLabel: string;
+  pointName?: string; // ツールチップの横軸の名前(省略時「倍率」。Noise Injectionでは「強さ」「層」)
 }
 
 /**
@@ -13,7 +14,7 @@ interface SweepChartProps {
  * 1系列なので凡例は付けず、見出しで系列を示す。線2px・点8px、ホバーで各点の値を表示、
  * 補助線は控えめ、今の倍率を縦の破線で示す。数値は下の表でも確認できる。
  */
-export function SweepChart({ points, currentScale, xLabel }: SweepChartProps) {
+export function SweepChart({ points, currentScale, xLabel, pointName }: SweepChartProps) {
   const { t } = useLang();
   const [hover, setHover] = useState<number | null>(null);
   const W = 560;
@@ -108,7 +109,7 @@ export function SweepChart({ points, currentScale, xLabel }: SweepChartProps) {
             whiteSpace: "nowrap",
           }}
         >
-          <div>{t("倍率", "Scale")} {formatNum(hovered.scale)}</div>
+          <div>{pointName ?? t("倍率", "Scale")} {formatNum(hovered.scale)}</div>
           <div>KL {hovered.kl.toFixed(4)}</div>
           <div style={{ color: "var(--text-secondary)" }}>
             {t("最有力", "Top")}: {JSON.stringify(hovered.top_token_text)} ({(hovered.top_prob * 100).toFixed(1)}%)

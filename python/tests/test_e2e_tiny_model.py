@@ -337,3 +337,52 @@ def test_steering_result_has_warnings_field(tiny):
     r = run_entry("run_activation_steering.py", {**base, **STEER, "scale": 1.0, "use_chat_template": True})
     assert r["success"], r
     assert r["warnings"] == []  # テンプレートで包むと1トークンにはならない
+
+
+# ---- Noise Injection(2026-10-24追加) ----
+NOISE = {"input_text": "hello", "max_new_tokens": 6, "target_node_ids": ["model.layers.0", "model.layers.1"]}
+
+
+@pytest.mark.parametrize("use_chat_template", [False, True])
+def test_noise_single(tiny, use_chat_template):
+    _, _, base = tiny
+    r = run_entry("run_noise_injection.py", {**base, **NOISE, "strength": 0.5, "use_chat_template": use_chat_template})
+    assert r["success"], r
+    assert len(r["points"]) == 1 and r["points"][0]["kl_divergence"] > 0
+    assert r["points"][0]["generated_text"] is not None and r["generated_text_baseline"] is not None
+
+
+def test_noise_is_reproducible_and_seed_dependent(tiny):
+    _, _, base = tiny
+    req = {**base, **NOISE, "strength": 0.5, "compare_generation": False}
+    a, b = run_entry("run_noise_injection.py", req), run_entry("run_noise_injection.py", req)
+    c = run_entry("run_noise_injection.py", {**req, "seed": 7})
+    assert a["points"][0]["kl_divergence"] == b["points"][0]["kl_divergence"]
+    assert a["points"][0]["kl_divergence"] != c["points"][0]["kl_divergence"]
+
+
+def test_noise_strength_sweep(tiny):
+    _, _, base = tiny
+    r = run_entry("run_noise_injection.py", {**base, **NOISE, "mode": "strength_sweep", "strengths": [1.0, 0, 0.2]})
+    assert r["success"], r
+    pts = r["points"]
+    assert [p["strength"] for p in pts] == [0.0, 0.2, 1.0]
+    assert pts[0]["kl_divergence"] == 0 and pts[0]["generated_text"] == r["generated_text_baseline"]
+    assert pts[2]["kl_divergence"] > 0
+
+
+def test_noise_layer_sweep(tiny):
+    _, _, base = tiny
+    r = run_entry("run_noise_injection.py", {**base, **NOISE, "mode": "layer_sweep", "strength": 0.5,
+                                            "compare_generation": False})
+    assert r["success"], r
+    assert [p["node_id"] for p in r["points"]] == NOISE["target_node_ids"]
+    assert all(p["generated_text"] is None for p in r["points"])
+
+
+@pytest.mark.parametrize("bad", [{"target_node_ids": []}, {"target_node_ids": ["nope"]}, {"strength": -1},
+                                 {"mode": "bogus"}])
+def test_noise_rejects_bad_input(tiny, bad):
+    _, _, base = tiny
+    r = run_entry("run_noise_injection.py", {**base, **NOISE, **bad})
+    assert not r["success"] and r["error_type"] in ("GraphValidationError", "InvalidInput"), r

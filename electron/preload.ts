@@ -127,6 +127,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
     noRepeatNgramSize?: number;
   }): Promise<unknown> => ipcRenderer.invoke("model:runLayerAblation", payload),
 
+  // Noise Injection(2026-10-24追加)
+  runNoiseInjection: (payload: {
+    modelDir: string;
+    config: Record<string, unknown>;
+    nodes: Array<{ id: string; role: string; layer_index: number | null }>;
+    edges: Array<{ source: string; target: string }>;
+    inputText?: string;
+    useChatTemplate?: boolean;
+    targetNodeIds: string[];
+    mode: "single" | "strength_sweep" | "layer_sweep";
+    strength?: number;
+    strengths?: number[];
+    seed?: number;
+    compareGeneration?: boolean;
+    maxNewTokens?: number;
+  }): Promise<unknown> => ipcRenderer.invoke("model:runNoiseInjection", payload),
+
   activationSteering: (payload: {
     modelDir: string;
     config: Record<string, unknown>;

@@ -783,6 +783,82 @@ ipcMain.handle(
 );
 
 /**
+ * Noise Injection(2026-10-24追加、長編動画M4「AIを酔っぱらわせろ」用) — 選択したノードの出力に
+ * ランダムな雑音(強さ=内部状態の大きさに対する割合)を足して通常時と比べる。強さスイープ・層スイープも行う。
+ * run_noise_injection.py を呼び出す。Layer Ablation Wizardと同じ設計パターン。
+ */
+ipcMain.handle(
+  "model:runNoiseInjection",
+  async (
+    _event,
+    payload: {
+      modelDir: string;
+      config: Record<string, unknown>;
+      nodes: Array<{ id: string; role: string; layer_index: number | null }>;
+      edges: Array<{ source: string; target: string }>;
+      inputText?: string;
+      useChatTemplate?: boolean;
+      targetNodeIds: string[];
+      mode: "single" | "strength_sweep" | "layer_sweep";
+      strength?: number;
+      strengths?: number[];
+      seed?: number;
+      compareGeneration?: boolean;
+      maxNewTokens?: number;
+    }
+  ) => {
+    return new Promise((resolve, reject) => {
+      const scriptPath = isDev
+        ? path.join(__dirname, "../python/run_noise_injection.py")
+        : path.join(process.resourcesPath, "python/run_noise_injection.py");
+
+      const child: ChildProcessWithoutNullStreams = spawn(defaultPythonBin(), [scriptPath], {
+        env: { ...process.env, AIDE_LANG: uiLang, PYTHONIOENCODING: "utf-8" },
+      });
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (data) => {
+        stdout += data.toString();
+      });
+      child.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+      child.on("close", (code) => {
+        try {
+          resolve(JSON.parse(stdout));
+        } catch (e) {
+          reject(new Error(`run_noise_injection.py failed (code ${code}): ${stderr || stdout || e}`));
+        }
+      });
+      child.on("error", (err) => {
+        reject(new Error(`Failed to spawn Python process: ${err.message}`));
+      });
+
+      child.stdin.write(
+        JSON.stringify({
+          model_dir: payload.modelDir,
+          config: payload.config,
+          nodes: payload.nodes,
+          edges: payload.edges,
+          input_text: payload.inputText,
+          use_chat_template: payload.useChatTemplate ?? false,
+          target_node_ids: payload.targetNodeIds,
+          mode: payload.mode,
+          strength: payload.strength ?? 0.3,
+          strengths: payload.strengths,
+          seed: payload.seed ?? 0,
+          compare_generation: payload.compareGeneration ?? true,
+          max_new_tokens: payload.maxNewTokens ?? 20,
+          temperature: 0.0,
+        })
+      );
+      child.stdin.end();
+    });
+  }
+);
+
+/**
  * Phase3: Activation Steering Studio — 対照的なプロンプト群(positive/negative)から
  * ステアリングベクトルを計算し、選択したノードに加算して出力を誘導する。
  * run_activation_steering.py を呼び出す。Layer Ablation Wizardと同じ設計パターン

@@ -27,6 +27,7 @@ import { TokenJourneyView } from "./components/TokenJourneyView";
 import { BattleView } from "./components/BattleView";
 import { NeuronSearchView } from "./components/NeuronSearchView";
 import { LayerAblationView } from "./components/LayerAblationView";
+import { NoiseInjectionPanel } from "./components/NoiseInjectionPanel";
 import { ActivationSteeringView } from "./components/ActivationSteeringView";
 import { SteeringToolbar } from "./components/SteeringToolbar";
 import { LiveSliderPanel } from "./components/LiveSliderPanel";
@@ -112,7 +113,7 @@ export default function App() {
 
   // --- 観察タブ(Phase2)の状態 ---
   const [observeSubTab, setObserveSubTab] = useState<
-    "internals" | "sensitivity" | "journey" | "battle" | "neuronSearch" | "ablation" | "steering" | "live"
+    "internals" | "sensitivity" | "journey" | "battle" | "neuronSearch" | "ablation" | "noise" | "steering" | "live"
   >("internals");
   const [observeInputText, setObserveInputText] = useState(() => (lang === "en" ? "Hello" : "こんにちは"));
   const [aggregateHeads, setAggregateHeads] = useState(true);
@@ -1113,6 +1114,13 @@ export default function App() {
                 style={observeSubTab === "ablation" ? tabButtonActiveStyle : tabButtonStyle}
               >
                 Layer Ablation
+              </button>
+              <button
+                onClick={() => setObserveSubTab("noise")}
+                style={observeSubTab === "noise" ? tabButtonActiveStyle : tabButtonStyle}
+                title={t("選んだ層の出力にランダムな雑音を足し、文章がどこで崩れるか・どの層が弱いかを見る(2026-10-24追加)", "Add random noise to the selected layers and see where the text falls apart and which layers are most sensitive")}
+              >
+                Noise Injection
               </button>
               <button
                 onClick={() => setObserveSubTab("steering")}
@@ -2118,6 +2126,18 @@ export default function App() {
               )}
             </div>
           </div>
+        )}
+
+        {tab === "observe" && observeSubTab === "noise" && loadState.status === "loaded" && rawResult && (
+          // Noise Injection(2026-10-24追加)。状態・操作UIはNoiseInjectionPanel内で完結させている
+          <NoiseInjectionPanel
+            modelDir={loadState.modelDir}
+            config={rawResult.raw_config}
+            nodes={executionNodeDefs}
+            edges={flowEdgesToExecutionEdges(execEdges)}
+            useChatTemplate={useChatTemplate}
+            selectableNodes={ablatableNodes}
+          />
         )}
 
         {tab === "observe" && observeSubTab === "live" && loadState.status === "loaded" && rawResult && (

@@ -391,6 +391,54 @@ export interface LayerAblationErrorResult {
 
 export type LayerAblationResult = LayerAblationSuccessResult | LayerAblationErrorResult;
 
+// Noise Injection(2026-10-24追加、長編動画M4「AIを酔っぱらわせろ」用)
+// 確認事項: 強さ=内部状態の大きさに対する割合(0.1=10%)、1語ごとに新しい雑音(seed固定で再現可能)、
+// single(選んだノードすべてに同時)/strength_sweep(強さを段階的に)/layer_sweep(各ノードを1つずつ)
+export type NoiseInjectionMode = "single" | "strength_sweep" | "layer_sweep";
+
+export interface NoiseInjectionRequest {
+  modelDir: string;
+  config: Record<string, unknown>;
+  nodes: ExecutionNode[];
+  edges: ExecutionEdge[];
+  inputText?: string;
+  useChatTemplate?: boolean;
+  targetNodeIds: string[];
+  mode: NoiseInjectionMode;
+  strength?: number; // single・layer_sweep
+  strengths?: number[]; // strength_sweep(省略時はPython側の既定値)
+  seed?: number;
+  compareGeneration?: boolean;
+  maxNewTokens?: number;
+}
+
+export interface NoiseInjectionPoint {
+  strength: number;
+  node_id: string | null; // layer_sweepでは雑音を足したノード、それ以外はnull
+  kl_divergence: number;
+  top_token_text: string | null;
+  top_prob: number;
+  top_token_changed: boolean;
+  generated_text: string | null;
+}
+
+export interface NoiseInjectionSuccessResult {
+  success: true;
+  mode: NoiseInjectionMode;
+  seed: number;
+  target_node_ids: string[];
+  strength: number | null;
+  input_token_ids: number[];
+  input_tokens_text: string[] | null;
+  baseline_top_token_text: string | null;
+  baseline_top_prob: number;
+  generated_text_baseline: string | null;
+  points: NoiseInjectionPoint[];
+  executed_order: string[];
+}
+
+export type NoiseInjectionResult = NoiseInjectionSuccessResult | LayerAblationErrorResult;
+
 // Phase3: Activation Steering Studio関連の型
 // 2026-09-15確認事項: ステアリングベクトルは対照プロンプト群(positive/negative)の
 // 平均活性化値の差分方式。適用対象はユーザーがGUI上で選んだ1つ以上のノード
@@ -573,6 +621,7 @@ export interface ElectronAPI {
   neuronSearchRank: (payload: NeuronSearchRankRequest) => Promise<NeuronSearchResult>;
   neuronSearchProbe: (payload: NeuronSearchProbeRequest) => Promise<NeuronSearchResult>;
   runLayerAblation: (payload: LayerAblationRequest) => Promise<LayerAblationResult>;
+  runNoiseInjection: (payload: NoiseInjectionRequest) => Promise<NoiseInjectionResult>;
   activationSteering: (payload: ActivationSteeringRequest) => Promise<ActivationSteeringResult>;
   liveStart: (payload: LiveStartRequest) => Promise<{ started: boolean }>;
   liveSend: (command: LiveCommand) => Promise<{ sent: boolean; message?: string }>;
