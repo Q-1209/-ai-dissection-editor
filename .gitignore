@@ -39,3 +39,8 @@ __pycache__/
 python/token_journey_result.json
 *.result.json
 .pytest_cache/
+
+# setup スクリプトが作るもの
+.venv/
+models/
+.venv-test/

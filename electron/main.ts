@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "node:path";
+import { existsSync, readdirSync } from "node:fs";
 import { spawn, ChildProcessWithoutNullStreams } from "node:child_process";
 
 // __dirname はビルド後 dist-electron/ 配下に配置される想定
@@ -12,8 +13,24 @@ let mainWindow: BrowserWindow | null = null;
  * Windowsでは "python3" がMicrosoft Storeの案内用スタブ(実行すると code 9009 で失敗)を指すことが多いため、
  * 既定を "python" にする(2026-10-13、実機で model:inspect が code 9009 で失敗したため)。
  */
+function venvHasTorch(venv: string): boolean {
+  if (process.platform === "win32") return existsSync(path.join(venv, "Lib", "site-packages", "torch"));
+  const lib = path.join(venv, "lib");
+  if (!existsSync(lib)) return false;
+  return readdirSync(lib).some((d) => existsSync(path.join(lib, d, "site-packages", "torch")));
+}
+
 function defaultPythonBin(): string {
-  return process.env.PYTHON_BIN || (process.platform === "win32" ? "python" : "python3");
+  if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+  // setup スクリプト(scripts/setup.ps1・setup.sh)が作る .venv があれば、それを使う(2026-10-23)
+  // `electron dist-electron/main.js` で起動すると getAppPath() は dist-electron になることがあるので、1つ上も見る
+  const rel = process.platform === "win32" ? [".venv", "Scripts", "python.exe"] : [".venv", "bin", "python"];
+  // セットアップが途中で失敗した .venv（PyTorchが入っていない）は使わない。いつものPythonに戻す
+  for (const root of [app.getAppPath(), path.dirname(app.getAppPath())]) {
+    const venvPython = path.join(root, ...rel);
+    if (existsSync(venvPython) && venvHasTorch(path.join(root, ".venv"))) return venvPython;
+  }
+  return process.platform === "win32" ? "python" : "python3";
 }
 
 /**

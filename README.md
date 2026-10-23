@@ -48,6 +48,18 @@ Tested on **Windows** with **Qwen2.5-0.5B-Instruct** on CPU. macOS and Linux sho
 
 **Requirements:** Node.js 22 LTS, Python 3.10+, Git, about 2 GB of disk for the small model.
 
+**One command** (creates `.venv`, installs CPU PyTorch, downloads Qwen2.5-0.5B-Instruct into `models/`, runs `npm install`; the app picks up `.venv` by itself):
+
+```bash
+git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
+cd ai-dissection-editor
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # Windows
+bash scripts/setup.sh                                        # macOS / Linux
+npm run electron:dev
+```
+
+Or step by step:
+
 ```bash
 git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
 cd ai-dissection-editor

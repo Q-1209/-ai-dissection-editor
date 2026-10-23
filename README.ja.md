@@ -46,6 +46,18 @@ ComfyUIやLangFlowのような既存のノード系ツールは、モデルを�
 
 **必要なもの:** Node.js 22 LTS、Python 3.10以上、Git、小型モデル用の空き容量約2GB
 
+**1コマンドで準備**（`.venv` の作成、CPU版PyTorchの導入、Qwen2.5-0.5B-Instruct を `models/` にダウンロード、`npm install` まで。アプリは `.venv` を自動で使います）:
+
+```bash
+git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
+cd ai-dissection-editor
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # Windows
+bash scripts/setup.sh                                        # macOS / Linux
+npm run electron:dev
+```
+
+手で1つずつ行う場合:
+
 ```bash
 git clone https://github.com/Q-1209/-ai-dissection-editor.git ai-dissection-editor
 cd ai-dissection-editor
