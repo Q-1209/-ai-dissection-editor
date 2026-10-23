@@ -7,6 +7,7 @@ interface SweepChartProps {
   currentScale: number | null; // 今のスライダーの値(縦の破線で示す)
   xLabel: string;
   pointName?: string; // ツールチップの横軸の名前(省略時「倍率」。Noise Injectionでは「強さ」「層」)
+  integerTicks?: boolean; // 横軸の目盛りを整数にする(層番号など)
 }
 
 /**
@@ -14,7 +15,7 @@ interface SweepChartProps {
  * 1系列なので凡例は付けず、見出しで系列を示す。線2px・点8px、ホバーで各点の値を表示、
  * 補助線は控えめ、今の倍率を縦の破線で示す。数値は下の表でも確認できる。
  */
-export function SweepChart({ points, currentScale, xLabel, pointName }: SweepChartProps) {
+export function SweepChart({ points, currentScale, xLabel, pointName, integerTicks }: SweepChartProps) {
   const { t } = useLang();
   const [hover, setHover] = useState<number | null>(null);
   const W = 560;
@@ -32,9 +33,10 @@ export function SweepChart({ points, currentScale, xLabel, pointName }: SweepCha
     const x = (v: number) => M.left + ((v - xMin) / (xMax - xMin || 1)) * iw;
     const y = (v: number) => M.top + ih - (v / yMax) * ih;
     const yTicks = [0, yMax / 2, yMax];
-    const xTicks = uniqueTicks([xMin, (xMin + xMax) / 2, xMax]);
+    const mid = (xMin + xMax) / 2;
+    const xTicks = uniqueTicks([xMin, integerTicks ? Math.round(mid) : mid, xMax]);
     return { x, y, yMax, yTicks, xTicks, xMin, xMax };
-  }, [points, iw, ih, M.left, M.top]);
+  }, [points, iw, ih, M.left, M.top, integerTicks]);
 
   if (points.length === 0) return null;
   const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${geo.x(p.scale)},${geo.y(p.kl)}`).join(" ");

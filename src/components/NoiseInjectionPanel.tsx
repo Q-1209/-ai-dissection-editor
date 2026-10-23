@@ -287,7 +287,7 @@ function NoiseResultView({ result, selectableNodes }: { result: NoiseInjectionRe
           ` / most sensitive: ${most.node_id} (KL ${most.kl_divergence.toFixed(3)})`)}
       </div>
       <SweepChart points={chartPoints} currentScale={null} xLabel={xLabel}
-        pointName={isLayer ? t("層", "Layer") : t("強さ", "Strength")} />
+        pointName={isLayer ? t("層", "Layer") : t("強さ", "Strength")} integerTicks={isLayer} />
       {result.generated_text_baseline !== null && (
         <div style={{ ...textBox, flex: "none" }}>
           <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>{t("通常時", "Normal")}</div>
