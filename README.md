@@ -95,7 +95,8 @@ The UI is in English and Japanese. It follows your OS language, and the button a
 | Architecture | Status |
 | --- | --- |
 | Qwen2 / Qwen2.5 (dense) | ✅ Verified on real weights (Qwen2.5-0.5B-Instruct) |
-| Llama-family dense (Llama, older dense Mistral) | 🟡 Should work. The structure is verified on dummy weights, but real weights haven't been tested yet. |
+| Llama (dense) | ✅ Runs on real weights (Llama-3.2-1B-Instruct, Llama-3.2-3B-Instruct): generation with the chat template and noise injection, run through the engine from a script. Not every GUI feature has been checked on Llama yet. |
+| Older dense Mistral | 🟡 Should work. The structure is verified on dummy weights, but real weights haven't been tested yet. |
 | Gemma 2 / 3 | 🟡 The structure viewer works. The execution engine is not supported yet. |
 | MoE (Mixtral, recent Mistral/Gemma), Mamba/SSM, multimodal | ❌ Not supported |
 
